@@ -15,6 +15,9 @@ raw_yield_train <- read.csv("https://de.cyverse.org/anon-files/iplant/home/share
 raw_yield_train <- raw_yield_train %>% select("Env", "Date_Harvested", "Yield_Mg_ha")
 raw_yield_train$Date_Harvested <- as.Date(raw_yield_train$Date_Harvested, format = "%m/%d/%y") %>% format("%Y-%m%-%d")
 
+#for consistency, rename 'Date_Harvested' label in Yield dataframe to 'Date'
+names(raw_yield_train)[names(raw_yield_train) == "Date_Harvested"] <- "Date"
+
 #look for initial cleansing indicators  
 initial_summary <- function (df) {
   na_counts <- sapply(df, function(x) sum(is.na(x)))

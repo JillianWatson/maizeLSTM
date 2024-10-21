@@ -5,25 +5,35 @@ library(lubridate)
 
 source("~/maizeLSTM/data_wrangling/train_data.R")
 
-#monthly distribution over all years 
+#monthly distribution over all years, all locations 
 plot_monthly_boxplots <- function(df) {
   numeric_cols <- names(df)[sapply(df, is.numeric)]
   
-  #new month column for easier grouping
+  #create month column for easier grouping
   df$Month <- factor(month(df$Date, label = TRUE), levels = month.abb)
     
   plots <- map(numeric_cols, function(col) {
-    ggplot(df, aes(x = Month, y = .data[[col]])) +
-      geom_boxplot() +
+    #remove assigning 'p <-' below to view original PRECTOTCORR box plot 
+    p <- ggplot(df, aes(x = Month, y = .data[[col]])) +
       labs(title = paste("Monthly Boxplot of", col, "(All Years Combined"),
             x = "Month",
             y = col) +
-      theme_minimal() 
-    })
+        theme_minimal() 
+    
+    #initial scaling for PRECTOTCORR rendered difficult results for interpretation 
+    #remove if/else/return(p) block to view original box plot 
+    if (col == "PRECTOTCORR") {
+      p <- p + geom_boxplot() + scale_y_sqrt() + 
+        labs(y = paste(col, "(square root scale)"))
+    } else {
+      p <- p + geom_boxplot()
+    }
+    return(p)
+  })
     
     names(plots) <- numeric_cols
     return(plots)
-  }
+}
 
 #visualize distributions of each numerical field over entire data set, NOT subdivided by month, year, location, etc.
 plot_histograms <- function(df) {
@@ -45,7 +55,7 @@ plot_histograms <- function(df) {
       labs(title = paste("Histogram of", col), 
            x = col, 
            y = "Count",
-           subtitle = paste("Bins:", bins)) +
+           subtitle = paste("Bins:", bins)) + 
       theme_minimal()
   })
   
@@ -53,3 +63,7 @@ plot_histograms <- function(df) {
   return(plots)
 }
 
+#plot_monthly_boxplots(raw_wx_train)
+#plot_histograms(raw_wx_train)
+#plot_monthly_boxplots(raw_yield_train)
+#plot_histograms(raw_yield_train)
