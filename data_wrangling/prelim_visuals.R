@@ -81,6 +81,6 @@ plot_histograms <- function(df) {
 }
 
 #plot_monthly_boxplots(raw_wx_train)
-plot_histograms(raw_wx_train)
+#plot_histograms(raw_wx_train)
 #plot_monthly_boxplots(raw_yield_train)
 #plot_histograms(raw_yield_train)
