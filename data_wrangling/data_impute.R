@@ -27,17 +27,24 @@ processing_yield_train <- processing_yield_train %>%
   mutate(
     SpatialLoc = extract_location(Env)
   ) %>%
-  arrange(SpatialLoc, Year) %>%
-  group_by(SpatialLoc)
+  arrange(Env, Year) %>%
+  group_by(Env)
 
 
-# linear imputation of NA Yield values
+# imputation of NA Yield values using predictive mean matching 
 # third transform step
 
-processing_yield_train <- processing_yield_train %>%
-  mutate(
-    Yield_Impute = na.approx(Yield_Mg_ha, na.rm = FALSE)
-  )
+processing_yield_train <- processing_yield_train %>% group_by(Env) %>%
+  mutate(Impute_Yield = ifelse(is.na(Yield_Mg_ha),rollapply(Yield_Mg_ha, width=7, FUN=mean, na.rm=TRUE,
+         fill = "extend", align = "center"), 
+         Yield_Mg_ha)
+  ) %>%
+  # for leading NA values, use first non-NA value
+  mutate(  
+    first_val = first(na.omit(Impute_Yield)),
+    Impute_Yield = ifelse(is.na(Impute_Yield), first_val, Impute_Yield)       
+  )  %>%
+  select(-first_val)
 
 ####################### WEATHER DATA ########################
 
