@@ -54,7 +54,7 @@ initial_summary <- function (df) {
   print(stat_summ)
 }
 
-wx_na <- initial_summary(raw_wx_train)
-yld_na <- initial_summary(raw_yield_train)
+#wx_na <- initial_summary(raw_wx_train)
+#yld_na <- initial_summary(raw_yield_train)
 
 

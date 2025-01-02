@@ -48,7 +48,7 @@ plot_histograms <- function(df) {
       breaks <- c(0, 1, 2.5, 5, 7.5, 15, 30, 50)
       
       ggplot(df, aes(x = .data[[col]])) + 
-        geom_histogram(breaks = breaks, fill = "skyblue", color = "black") + 
+        geom_histogram(breaks = breaks, fill = "cornflowerblue", color = "black") + 
         labs(title = paste("Histogram of", col),
              x = col,
              y = "Count") +
@@ -67,7 +67,7 @@ plot_histograms <- function(df) {
       bins <- ceiling(data_range / bin_width)
     
       ggplot(df, aes(x = .data[[col]])) +
-        geom_histogram(bins = bins, fill = "skyblue", color = "black") +
+        geom_histogram(bins = bins, fill = "cornflowerblue", color = "black") +
         labs(title = paste("Histogram of", col), 
             x = col, 
             y = "Count",
@@ -79,6 +79,7 @@ plot_histograms <- function(df) {
   names(plots) <- numeric_cols
   return(plots)
 }
+#select df for visualization
 
 #plot_monthly_boxplots(raw_wx_train)
 #plot_histograms(raw_wx_train)
