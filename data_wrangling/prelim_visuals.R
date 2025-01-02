@@ -35,7 +35,7 @@ plot_monthly_boxplots <- function(df) {
     return(plots)
 }
 
-#visualize distributions of each numerical fields over entire data set, NOT subdivided by month, year, location, etc.
+#visualize distributions of each numerical fields over entire data set, NOT subcategorized by month, year, location, etc.
 plot_histograms <- function(df) {
   numeric_cols <- names(df)[sapply(df, is.numeric)]
   

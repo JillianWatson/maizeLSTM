@@ -13,7 +13,7 @@ processing_yield_train <- raw_yield_train %>%
     Year = as.numeric(sub(".*_(\\d{4})$", "\\1", Env))
     )
 
-# create a column to group data according to the first 4 four chars of 'env', or
+# create a column to group data according to the first 4 four chars of 'env';
 # group based on spatial patterns
 
 extract_location <- function(env) {
@@ -27,8 +27,8 @@ processing_yield_train <- processing_yield_train %>%
   mutate(
     SpatialLoc = extract_location(Env)
   ) %>%
-  arrange(Env, Year) %>%
-  group_by(Env)
+  arrange(SpatialLoc, Year) %>%
+  group_by(SpatialLoc, Year)
 
 
 # imputation of NA Yield values using predictive mean matching 
@@ -52,7 +52,10 @@ processing_wx_train <- raw_wx_train %>%
   mutate(
     SpatialLoc = extract_location(Env)
   ) %>%
-  arrange(SpatialLoc) %>%
-  group_by(SpatialLoc)
+  mutate(
+    Year = as.numeric(sub(".*_(\\d{4})$", "\\1", Env))
+  ) %>%
+  arrange(SpatialLoc, Year) %>%
+  group_by(SpatialLoc, Year)
 
 
