@@ -59,3 +59,33 @@ processing_wx_train <- raw_wx_train %>%
   group_by(SpatialLoc, Year)
 
 
+######################## Check Matching Keys for both df's ######################
+
+# key formally exists as 'Env' in raw data, now sub categorized as 'SpatialLoc'
+# in processed data frames
+
+find_matching_keys <- full_join(
+  data.frame(
+    key = unique(processing_wx_train$SpatialLoc),
+    exists_in_wx = TRUE
+  ),
+  
+  data.frame(
+    key = unique(processing_yield_train$SpatialLoc),
+    exists_in_yield = TRUE
+  ),
+  by = "key"
+) %>%
+  mutate(
+    exists_in_wx = ifelse(is.na(exists_in_wx), FALSE, exists_in_wx),
+    exists_in_yield = ifelse(is.na(exists_in_yield), FALSE, exists_in_yield)
+  ) %>%
+  
+  group_by(exists_in_wx, exists_in_yield) %>%
+  summarize(count = n())
+
+
+#print(find_matching_keys)
+
+
+

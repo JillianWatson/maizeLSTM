@@ -25,7 +25,7 @@ Spatial_annual_Yield <- function(df) {
             .groups = "drop"
           )
         
-        #build plots    
+        # build plots    
         p <- ggplot(yield_stats, aes(x=factor(Year))) + 
           
           geom_rect(aes(
@@ -60,7 +60,7 @@ Spatial_annual_Yield <- function(df) {
               axis.text.x = element_text(angle = 45, hjust = 1),
               plot.title = element_text(size = 10)
           )
-        #append each env plots to plot list
+        # append each env plots to plot list
         plot_list[[paste(loc, data, sep = "_")]] <- p
       }
     }
@@ -73,7 +73,7 @@ Spatial_annual_Yield <- function(df) {
 Spatiotemporal_annual__Wx <- function(df) {
   
   get_fields <- names(df)[!names(df) %in% c("Env", "Year", "Date", "SpatialLoc")]
-  #organize base environments and parameters
+  # organize base environments and parameters
   plot_list <- list()
   
   for (loc in unique(df$SpatialLoc)) {
@@ -134,18 +134,56 @@ Spatiotemporal_annual__Wx <- function(df) {
 }
 
 
-# plot correlation distributions of yield x weather data
+# plot annual correlation distributions of yield x weather data
 
 correlation_annual <- function(df_yield, df_wx) {
   
+  wx_params <- names(df_wx)[!names(df_wx) %in% c("Env", "Year", "Date", "SpatialLoc")]
+  
+  
   correlation_plot_list <- list()
   
-  for (loc in unique(df$SpatialLoc)) {
+  for (loc in unique(df_yield$SpatialLoc)) {
     loc_yield <- df_yield %>% filter(SpatialLoc == loc)
     loc_wx <- df_wx %>% filter(SpatialLoc == loc)
     
-    
+    for (param in wx_params) {
+      annual_wx <- loc_wx %>%
+        group_by(Year) %>%
+        summarise(
+          wx_val = mean(get(param), na.rm = TRUE),
+          .groups = "drop"
+        )
+      
+      annual_yield <- loc_yield %>%
+        group_by(Year) %>%
+        summarise(
+          yield_val = Impute_Yield,
+          .groups = "drop"
+        )
+      
+      join_data <- inner_join(annual_yield, annual_wx, by = "Year")
+      
+      # generate plots
+      
+      p <- ggplot(join_data, aes(
+        x = yield_val,
+        y = wx_val)) + 
+        
+        geom_point(shape = 1, fill = "cadetblue3") + 
+        geom_smooth(method = "lm", color = "darkslategrey") +
+        labs(
+          title = paste(loc, "-", param, "Vs Yield"),
+          x = "Yield",
+          y = param
+        ) +
+        theme_minimal()
+      
+      correlation_plot_list[[paste(loc, param, sep = "_")]] <- p
+      
+    }
   }
+  
   return(correlation_plot_list)
 }
 
@@ -153,13 +191,16 @@ correlation_annual <- function(df_yield, df_wx) {
 
 
 
-#generate wx plots
+# generate wx plots
 #Spatiotemporal_annual__Wx(processing_wx_train)
 
-#generate yield plots
+# generate yield plots
 #Spatial_annual_Yield(processing_yield_train)
 
-#display select base environment plots 
+# generate correlation plots
+correlation_annual(processing_yield_train, processing_wx_train)
+
+# display select base environment plots 
 display_env_plots <- function(plot_list, spatial_key) {
   env_plots <- plot_list[grep(paste0("^", spatial_key), names(plot_list))]
   wrap_plots(env_plots, ncol = 2)
