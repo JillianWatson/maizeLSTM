@@ -2,10 +2,10 @@ library(stats)
 
 source("~/maizeLSTM/data_wrangling/data_impute.R")
 
-########## df with prefix 'processing' are to be used in this file ###########
+########## data frame with prefix 'processing' are to be used in this file ###########
 
-# start: starting month for desired growth period, between 1-12
-# end: ending month for desired growth period, between 1-12
+# start: starting month for desired growth period - int between 1-12
+# end: ending month for desired growth period - int between 1-12
 generate_annual_features <- function(df, start, end) {
   
   location_code <- unique(df$SpatialLoc)
@@ -85,11 +85,12 @@ generate_annual_features <- function(df, start, end) {
 # temp_c: Uses wet bulb temperature in Celsius 
 # rh_percent: relative humidity (%) represented as a value between 0-100
 calculate_vpd <- function(temp_c, rh_percent) {
+  
   # Calculate saturation vapor pressure (kPa)
   es <- 0.6108 * exp((17.27 * temp_c) / (temp_c + 237.3))
   # Calculate actual vapor pressure
   ea <- es * (rh_percent / 100)
-  # Calculate VPD
+  
   vpd <- es - ea
   return(vpd)
 }

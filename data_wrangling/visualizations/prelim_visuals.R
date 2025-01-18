@@ -5,7 +5,8 @@ library(lubridate)
 
 source("~/maizeLSTM/data_wrangling/train_data.R")
 
-#monthly distribution over all years, all locations 
+# Monthly distribution over all years, all locations 
+# df: raw_wx_train or raw_yield_train data frame
 plot_monthly_boxplots <- function(df) {
   numeric_cols <- names(df)[sapply(df, is.numeric)]
   
@@ -35,7 +36,9 @@ plot_monthly_boxplots <- function(df) {
     return(plots)
 }
 
-#visualize distributions of each numerical fields over entire data set, NOT subcategorized by month, year, location, etc.
+# Visualize distributions of each numerical fields over entire data set,
+# NOT subcategorized by month, year, location, etc.
+# df: raw_wx_train or raw_yield_train data frame
 plot_histograms <- function(df) {
   numeric_cols <- names(df)[sapply(df, is.numeric)]
   
@@ -79,6 +82,7 @@ plot_histograms <- function(df) {
   names(plots) <- numeric_cols
   return(plots)
 }
+
 #select df for visualization
 
 #plot_monthly_boxplots(raw_wx_train)
