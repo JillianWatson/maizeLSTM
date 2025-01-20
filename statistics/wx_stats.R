@@ -4,8 +4,8 @@ source("~/maizeLSTM/data_wrangling/data_impute.R")
 
 ########## data frame with prefix 'processing' are to be used in this file ###########
 
-# start: starting month for desired growth period - int between 1-12
-# end: ending month for desired growth period - int between 1-12
+# start: starting month for desired growth period, a value between 1-12
+# end: ending month for desired growth period, a value between 1-12
 generate_annual_features <- function(df, start, end) {
   
   location_code <- unique(df$SpatialLoc)
@@ -96,4 +96,4 @@ calculate_vpd <- function(temp_c, rh_percent) {
 }
 
 
-#generate_annual_features(processing_wx_train, 5, 9)
+generate_annual_features(processing_wx_train, 5, 10)

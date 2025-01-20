@@ -14,8 +14,7 @@ raw_wx_train$Date <- as.Date(as.character(raw_wx_train$Date), format = "%Y%m%d")
 
 #loading raw yield data, correct datatypes
 raw_yield_train <- read.csv("https://de.cyverse.org/anon-files/iplant/home/shared/commons_repo/curated/GenomesToFields_GenotypeByEnvironment_PredictionCompetition_2023/Training_data/1_Training_Trait_Data_2014_2021.csv", na.strings = c("", "NA"))
-raw_yield_train <- raw_yield_train %>% select("Env", "Date_Harvested", "Yield_Mg_ha")
-
+raw_yield_train <- raw_yield_train %>% select("Env","Date_Planted", "Date_Harvested", "Yield_Mg_ha")
 #for consistency, rename 'Date_Harvested' label in Yield data frame to 'Date'
 names(raw_yield_train)[names(raw_yield_train) == "Date_Harvested"] <- "Date"
 

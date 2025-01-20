@@ -52,6 +52,8 @@ processing_yield_train <- processing_yield_train %>%
   arrange(SpatialLoc, Year) %>%
   group_by(SpatialLoc, Year)
 
+write.csv(processing_yield_train, "Yield.csv", row.names = FALSE)
+
 ####################### WEATHER DATA ########################
 
 processing_wx_train <- raw_wx_train %>%
@@ -64,7 +66,7 @@ processing_wx_train <- raw_wx_train %>%
   arrange(SpatialLoc, Year) %>%
   group_by(SpatialLoc, Year)
 
-####################### TODO: META DATA ############################
+####################### META DATA ############################
 
 #First Transform Step
 #
@@ -132,12 +134,52 @@ for (loc in unique(processing_meta_train$SpatialLoc)) {
   }
 }
 
-#TXH4 being stubborn, manually imputing from TXH3 SpatialLoc
-txh3_coords <- processing_meta_train[processing_meta_train$SpatialLoc =="TXH3", ]
-txh3_most_recent <- txh3_coords[which(!is.na(txh3_coords$Latitude) & !is.na(txh3_coords$Longitude))[1], ]
+#from manual analysis of meta data (City, Farm), fixed some imputed coordinates for 
+#better representation of location
 
-processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "TXH4"][row] <- txh3_most_recent$Latitude
-processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "TXH4"][row] <- txh3_most_recent$Longitude
+#NEH1_2016 - Nebraska Lincoln University and Area. Similar to NEH1_2015
+neh1 <- processing_meta_train[processing_meta_train$SpatialLoc =="NEH1", ]
+
+neh1_2015 <- neh1[which(!is.na(neh1$Latitude) & !is.na(neh1$Longitude))[2], ]
+
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "NEH1"][3] <- neh1_2015$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "NEH1"][3] <- neh1_2015$Longitude
+
+#NEH2_2018 - Wahoo, Nebraska(Lincoln University), Similar to NEH1_2020
+neh1_2020 <-neh1[which(!is.na(neh1$Latitude) & !is.na(neh1$Longitude))[3], ]
+
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "NEH2"][3] <- neh1_2020$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "NEH2"][3] <- neh1_2020$Longitude
+
+#NEH2_2019 - Nebraska Lincoln University and Area, Similar to NEH1_2020
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "NEH2"][4] <- neh1_2020$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "NEH2"][4] <- neh1_2020$Longitude
+
+#NEH3_2017 - Nebraska Lincoln University and Area. Similar to NEH1_2015
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "NEH3"][3] <- neh1_2015$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "NEH3"][3] <- neh1_2015$Longitude
+
+#NEH3_2020 - North Platte, Nebraska. Similar to NEH2_2014
+neh2 <- processing_meta_train[processing_meta_train$SpatialLoc =="NEH2", ]
+
+neh2_2014 <- neh2[which(!is.na(neh2$Latitude) & !is.na(neh2$Longitude))[1], ]
+
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "NEH3"][4] <- neh2_2014$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "NEH3"][4] <- neh2_2014$Longitude
+
+#TXH2_2019 - College Station, Texas. Similar to TXH2_2020
+txh2 <- processing_meta_train[processing_meta_train$SpatialLoc =="TXH2", ]
+
+txh2_2020 <- txh2[which(!is.na(txh2$Latitude) & !is.na(txh2$Longitude))[2], ]
+
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "TXH2"][6] <- txh2_2020$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "TXH2"][6] <- txh2_2020$Longitude
+
+#TXH4_2019 - Lubbock, Texas. Similar to TXH2_{2014-2018}
+txh2_2014 <- txh2[which(!is.na(txh2$Latitude) & !is.na(txh2$Longitude))[1], ]
+
+processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "TXH4"][1] <- txh2_2014$Latitude
+processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "TXH4"][1] <- txh2_2014$Longitude
 
 
 ######################## Check Matching Keys between selected data frames ######################
@@ -166,7 +208,6 @@ find_matching_keys <- function(df1, df2) {
     group_by(exists_df_one, exists_df_two) %>%
     summarize(count = n())
 }
-
 
 
 
