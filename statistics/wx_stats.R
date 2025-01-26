@@ -4,6 +4,8 @@ source("~/maizeLSTM/data_wrangling/data_impute.R")
 
 ########## data frame with prefix 'processing' are to be used in this file ###########
 
+#TODO: feature engineer new wx df based on below stats
+
 # start: starting month for desired growth period, a value between 1-12
 # end: ending month for desired growth period, a value between 1-12
 generate_annual_features <- function(df, start, end) {
