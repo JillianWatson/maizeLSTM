@@ -24,7 +24,7 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
         lat2 <- coordinates[j, "Impute_lat"]
         long2 <- coordinates[j, "Impute_long"]
         
-        #latitude kilometers per DD
+        #latitude kilometers per Decimal Distance (DD)
         dist_lat <- abs(lat1 - lat2) * 110.574 
         avg_lat <- (lat1 + lat2) / 2
         #longitude kilometers per DD
@@ -36,39 +36,40 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
     }
   }
   
-  #initialize adjacency matrix
-  adj_matrix <- Matrix(0, nrow = n_locations, ncol = n_locations, sparse = TRUE)
-  for (i in 1:n_locations) {
-    distances <- dist_matrix[i,]
+#initialize adjacency matrix
+adj_matrix <- Matrix(0, nrow = n_locations, ncol = n_locations, sparse = TRUE)
+
+for (i in 1:n_locations) {
+  distances <- dist_matrix[i,]
     
-    #find connections within distance threshold
-    valid_neighbours <- which(distances <= distance_threshold & distances > 0)
+  #find connections within distance threshold
+  valid_neighbours <- which(distances <= distance_threshold & distances > 0)
     
-    #make connection if found
-    if(length(valid_neighbours) > 0 ) {
-      #sort by distance
-      sorted_nbrs <- valid_neighbours[order(distances[valid_neighbours])]
-      #use nearest connections up to k_max
-      connected_nbrs <- sorted_nbrs[1:min(k_max, length(sorted_nbrs))]
-      
-      adj_matrix[i, connected_nbrs] <- 1
-    }
+  #make connection if found
+  if(length(valid_neighbours) > 0 ) {
+    #sort by distance
+    sorted_nbrs <- valid_neighbours[order(distances[valid_neighbours])]
+    #use nearest connections up to k_max
+    connected_nbrs <- sorted_nbrs[1:min(k_max, length(sorted_nbrs))]
+    
+    #create connections  
+    adj_matrix[i, connected_nbrs] <- 1
   }
+}
   
   return(adj_matrix)
 }
   
 
-#number of connections
+#number of connections to try
 k <- c(3,4,5,7,9,10)
 
-distance_thresholds <- c(50, 100, 150,200)
+distance_thresholds <- c(50, 100, 150,200) #represented as kilometers
 
 adj_matrices <- list()
 results_df <- data.frame()
 
 #run distance network for different values of k and distance
-#TODO: store results for each matrix created, run metrics
 for (value in k) {
   for (dist in distance_thresholds) {
     adj_matrix <- create_distance_network(
@@ -76,28 +77,36 @@ for (value in k) {
       k_max = value,
       distance_threshold = dist
     )
+    matrix_key <- paste("k", value, "dist", dist, sep = "_")
+    adj_matrices[[matrix_key]] <- adj_matrix
+    
+    #evaluate connections
+    avg_connections <- mean(rowSums(adj_matrix))
+    isolated_locations <- sum(rowSums(adj_matrix) == 0)
+    
+    results_df <- rbind(results_df, data.frame(
+      k = value,
+      distance_thresholds = dist,
+      avg_connections = avg_connections,
+      isolated_locations = isolated_locations
+    ))
+    
+    #print results for each k
+    cat(sprintf("\nResults for k = %d , distance threshold = %d km: ", value, dist))
+    cat(sprintf("\nAverage connections per location: %.2f ", avg_connections))
+    cat(sprintf("\nNumber of isolated locations: %d\n ", isolated_locations ))
     
   }  
 }
   
-  #for gnn
-  edge_index <- which(adj_matrix == 1, arr.ind = TRUE) %>%
-    t() %>%
-    torch_tensor()
+#for gnn
+edge_index <- which(adj_matrix == 1, arr.ind = TRUE) %>%
+  t() %>%
+  torch_tensor()
   
-  #store results
-  knn_results[[as.character(value)]] <- knn_
-  adj_matrices[[as.character(value)]] <- adj_matrix
   
-  #evaluate knn for each k
-  avg_connections <- mean(rowSums(adj_matrix))
-  isolated_locations <- sum(rowSums(adj_matrix) <= 1)
-  
-  #print results for each k
-  cat(sprintf("\nResults for k = %d: ", value))
-  cat(sprintf("\nAverage connections per location: %.2f ", avg_connections))
-  cat(sprintf("\nNumber of isolated locations: %d\n ",isolated_locations ))
-}
+
+
 
 
 
