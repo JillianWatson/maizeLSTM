@@ -67,7 +67,11 @@ initial_summary <- function (df) {
   return(list(summary = stat_summ, outliers = outliers_list))
 }
 
-#wx_rawdata_summary <- initial_summary(raw_wx_train)
-#yld_rawdata_summmary <- initial_summary(raw_yield_train)
+wx_rawdata_summary <- initial_summary(raw_wx_train)
+yld_rawdata_summmary <- initial_summary(raw_yield_train)
+
+saveRDS(raw_meta_train, "raw_meta_train.rds")
+saveRDS(raw_wx_train, "raw_wx_train.rds")
+saveRDS(raw_yield_train, "raw_yield_train.rds")
 
 

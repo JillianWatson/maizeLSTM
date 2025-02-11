@@ -1,6 +1,6 @@
 library(stats)
 
-source("~/maizeLSTM/data_wrangling/data_impute.R")
+processing_wx_train <- readRDS("processing_wx_train.rds")
 
 ########## data frame with prefix 'processing' are to be used in this file ###########
 

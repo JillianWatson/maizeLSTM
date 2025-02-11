@@ -3,7 +3,7 @@ library(Matrix)
 library(tidyverse)
 library(torch)
 
-source("~/maizeLSTM/data_wrangling/data_impute.R")
+processing_meta_train <- readRDS("processing_meta_train.rds")
 
 coordinates <- processing_meta_train %>% 
   ungroup() %>%
@@ -19,10 +19,11 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
     #location 2
     for (j in 1:n_locations) {
       if (i != j) {
-        lat1 <- coordinates[i, "Impute_lat"]
-        long1 <- coordinates[i, "Impute_long"]
-        lat2 <- coordinates[j, "Impute_lat"]
-        long2 <- coordinates[j, "Impute_long"]
+        
+        lat1 <- coordinates$Impute_lat[i]
+        long1 <- coordinates$Impute_long[i]
+        lat2 <- coordinates$Impute_lat[j]
+        long2 <- coordinates$Impute_long[j]
         
         #latitude kilometers per Decimal Distance (DD)
         dist_lat <- abs(lat1 - lat2) * 110.574 
@@ -36,33 +37,33 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
     }
   }
   
-#initialize adjacency matrix
-adj_matrix <- Matrix(0, nrow = n_locations, ncol = n_locations, sparse = TRUE)
+  #initialize adjacency matrix
+  adj_matrix <- Matrix(0, nrow = n_locations, ncol = n_locations, sparse = TRUE)
 
-for (i in 1:n_locations) {
-  distances <- dist_matrix[i,]
+  for (i in 1:n_locations) {
+    distances <- dist_matrix[i,]
     
-  #find connections within distance threshold
-  valid_neighbours <- which(distances <= distance_threshold & distances > 0)
+    #find connections within distance threshold
+    valid_neighbours <- which(distances <= distance_threshold & distances > 0)
     
-  #make connection if found
-  if(length(valid_neighbours) > 0 ) {
-    #sort by distance
-    sorted_nbrs <- valid_neighbours[order(distances[valid_neighbours])]
-    #use nearest connections up to k_max
-    connected_nbrs <- sorted_nbrs[1:min(k_max, length(sorted_nbrs))]
+    #make connection if found
+    if(length(valid_neighbours) > 0 ) {
+      #sort by distance
+      sorted_nbrs <- valid_neighbours[order(distances[valid_neighbours])]
+      #use nearest connections up to k_max
+      connected_nbrs <- sorted_nbrs[1:min(k_max, length(sorted_nbrs))]
     
-    #create connections  
-    adj_matrix[i, connected_nbrs] <- 1
+      #create connections  
+      adj_matrix[i, connected_nbrs] <- 1
+    }
   }
-}
   
   return(adj_matrix)
 }
   
 
 #number of connections to try
-k <- c(3,4,5,7,9,10)
+k <- c(4,10,15,20,25)
 
 distance_thresholds <- c(50, 100, 150,200) #represented as kilometers
 
@@ -99,10 +100,20 @@ for (value in k) {
   }  
 }
   
+#for visualization file
+saveRDS(adj_matrices, "bounded_neighborhood/adj_matrices.rds")
+saveRDS(results_df, "bounded_neighborhood/results_df.rds")
+saveRDS(coordinates, "bounded_neighborhood/coordinates.rds")
+
+
 #for gnn
-edge_index <- which(adj_matrix == 1, arr.ind = TRUE) %>%
+selected_adj_matrix <- adj_matrices[["k_10_dist_150"]]
+
+edge_index <- which(selected_adj_matrix == 1, arr.ind = TRUE) %>%
   t() %>%
   torch_tensor()
+
+saveRDS(edge_index, "bounded_neighborhood/edge_index.rds")
   
   
 

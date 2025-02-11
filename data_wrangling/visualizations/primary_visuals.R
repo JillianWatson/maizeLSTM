@@ -1,7 +1,8 @@
 library(ggplot2)
 library(patchwork)
 
-source("~/maizeLSTM/data_wrangling/data_impute.R")
+processing_wx_train <- readRDS("processing_wx_train.rds")
+processing_yield_train <- readRDS("processing_yield_train.rds")
 
 ########### Data used in this file has not been normalized #############
 
@@ -196,14 +197,13 @@ correlation_annual <- function(df_yield, df_wx) {
 
 
 #generate all wx plots
-#Spatiotemporal_annual__Wx(processing_wx_train)
+Spatiotemporal_annual__Wx(processing_wx_train)
 
 #generate all yield plots
-#Spatial_annual_Yield(processing_yield_train)
+Spatial_annual_Yield(processing_yield_train)
 
 #generate all relationship plots
-#correlation_annual(processing_yield_train, processing_wx_train)
-
+correlation_annual(processing_yield_train, processing_wx_train)
 
 
 # Helper function display plots for specified location

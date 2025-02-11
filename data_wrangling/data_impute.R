@@ -1,4 +1,6 @@
-source("~/maizeLSTM/data_wrangling/train_data.R")
+raw_meta_train <- readRDS("raw_meta_train.rds")
+raw_wx_train <- readRDS("raw_wx_train.rds")
+raw_yield_train <- readRDS("raw_yield_train.rds")
 
 ###### Data used in this file has NOT been normalized ######
 
@@ -208,6 +210,10 @@ find_matching_keys <- function(df1, df2) {
     group_by(exists_df_one, exists_df_two) %>%
     summarize(count = n())
 }
+
+saveRDS(processing_meta_train, "processing_meta_train.rds")
+saveRDS(processing_wx_train, "processing_wx_train.rds")
+saveRDS(processing_yield_train, "processing_yield_train.rds")
 
 
 
