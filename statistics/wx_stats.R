@@ -1,10 +1,9 @@
 library(stats)
 
-processing_wx_train <- readRDS("processing_wx_train.rds")
+processing_wx_train <- readRDS("data_wrangling/processing_wx_train.rds")
 
 ########## data frame with prefix 'processing' are to be used in this file ###########
 
-#TODO: feature engineer new wx df based on below stats
 
 # start: starting month for desired growth period, a value between 1-12
 # end: ending month for desired growth period, a value between 1-12
@@ -97,5 +96,3 @@ calculate_vpd <- function(temp_c, rh_percent) {
   return(vpd)
 }
 
-
-generate_annual_features(processing_wx_train, 5, 10)

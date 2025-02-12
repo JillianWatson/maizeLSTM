@@ -70,8 +70,8 @@ initial_summary <- function (df) {
 wx_rawdata_summary <- initial_summary(raw_wx_train)
 yld_rawdata_summmary <- initial_summary(raw_yield_train)
 
-saveRDS(raw_meta_train, "raw_meta_train.rds")
-saveRDS(raw_wx_train, "raw_wx_train.rds")
-saveRDS(raw_yield_train, "raw_yield_train.rds")
+saveRDS(raw_meta_train, "data_wrangling/raw_meta_train.rds")
+saveRDS(raw_wx_train, "data_wrangling/raw_wx_train.rds")
+saveRDS(raw_yield_train, "data_wrangling/raw_yield_train.rds")
 
 

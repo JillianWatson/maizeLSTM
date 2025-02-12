@@ -1,8 +1,8 @@
 library(ggplot2)
 library(patchwork)
 
-processing_wx_train <- readRDS("processing_wx_train.rds")
-processing_yield_train <- readRDS("processing_yield_train.rds")
+processing_wx_train <- readRDS("data_wrangling/processing_wx_train.rds")
+processing_yield_train <- readRDS("data_wrangling/processing_yield_train.rds")
 
 ########### Data used in this file has not been normalized #############
 

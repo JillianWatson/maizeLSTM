@@ -1,6 +1,6 @@
-raw_meta_train <- readRDS("raw_meta_train.rds")
-raw_wx_train <- readRDS("raw_wx_train.rds")
-raw_yield_train <- readRDS("raw_yield_train.rds")
+raw_meta_train <- readRDS("data_wrangling/raw_meta_train.rds")
+raw_wx_train <- readRDS("data_wrangling/raw_wx_train.rds")
+raw_yield_train <- readRDS("data_wrangling/raw_yield_train.rds")
 
 ###### Data used in this file has NOT been normalized ######
 
@@ -211,9 +211,9 @@ find_matching_keys <- function(df1, df2) {
     summarize(count = n())
 }
 
-saveRDS(processing_meta_train, "processing_meta_train.rds")
-saveRDS(processing_wx_train, "processing_wx_train.rds")
-saveRDS(processing_yield_train, "processing_yield_train.rds")
+saveRDS(processing_meta_train, "data_wrangling/processing_meta_train.rds")
+saveRDS(processing_wx_train, "data_wrangling/processing_wx_train.rds")
+saveRDS(processing_yield_train, "data_wrangling/processing_yield_train.rds")
 
 
 
