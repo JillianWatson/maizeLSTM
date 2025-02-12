@@ -54,7 +54,6 @@ processing_yield_train <- processing_yield_train %>%
   arrange(SpatialLoc, Year) %>%
   group_by(SpatialLoc, Year)
 
-write.csv(processing_yield_train, "Yield.csv", row.names = FALSE)
 
 ####################### WEATHER DATA ########################
 
