@@ -53,5 +53,7 @@ calculate_vpd <- function(temp_c, rh_percent) {
   return(vpd)
 }
 
-gs_Wx <- generate_features(processing_wx_train, 5, 10)
+GS_Wx <- generate_features(processing_wx_train, 5, 10)
+
+saveRDS(GS_Wx, "feature_engineering/GS_Wx.rds")
 
