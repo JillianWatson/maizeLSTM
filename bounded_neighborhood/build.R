@@ -10,6 +10,13 @@ coordinates <- processing_meta_train %>%
   distinct(Impute_lat, Impute_long, .keep_all = TRUE) %>%
   select(Impute_lat, Impute_long)
 
+# Function to generate distance network between weather stations
+# based on real-time coordinate systems 
+#   coordinates: latitude x longitude of weather stations, units:Decimal Distance
+#   k_max: an array of integers representing the max amount of connections 
+#          an individual station can have
+#   distance_threshold: the upper limit condition that allows 2 stations to form
+#                       a connection
 create_distance_network <- function(coordinates, k_max, distance_threshold) {
   n_locations <- nrow(coordinates)
   dist_matrix <- matrix(0, nrow = n_locations, ncol = n_locations)
@@ -70,7 +77,7 @@ distance_thresholds <- c(50, 100, 150,200) #represented as kilometers
 adj_matrices <- list()
 results_df <- data.frame()
 
-#run distance network for different values of k and distance
+#run distance network for different values of k and distance threshold
 for (value in k) {
   for (dist in distance_thresholds) {
     adj_matrix <- create_distance_network(

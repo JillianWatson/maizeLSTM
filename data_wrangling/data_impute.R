@@ -6,7 +6,7 @@ raw_yield_train <- readRDS("data_wrangling/raw_yield_train.rds")
 
 # Helper Function to extract location codes for easier grouping based on spatial
 # patterns
-# env: Env field in data frames
+#   env: Env field in data frames
 
 extract_location <- function(env) {
   location <- sub("_\\d{4}", "", env)
@@ -185,8 +185,10 @@ processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "TXH4"][1]
 
 ######################## Check Matching Keys between selected data frames ######################
 
+# Function to find matching keys between 2 df's
 # key formally exists as 'Env' in raw data, now re categorized to 'SpatialLoc'
 # in any processed data frames
+#   df1, df2: any of the df's created in this file. Have prefix 'processing'.
 
 find_matching_keys <- function(df1, df2) {
 

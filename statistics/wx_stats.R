@@ -4,9 +4,9 @@ processing_wx_train <- readRDS("data_wrangling/processing_wx_train.rds")
 
 ########## data frame with prefix 'processing' are to be used in this file ###########
 
-
-# start: starting month for desired growth period, a value between 1-12
-# end: ending month for desired growth period, a value between 1-12
+# Function to evaluate engineered valuable weather stats
+# start: starting month for desired growth period, an int between 1-12
+# end: ending month for desired growth period, an int between 1-12
 generate_annual_features <- function(df, start, end) {
   
   location_code <- unique(df$SpatialLoc)

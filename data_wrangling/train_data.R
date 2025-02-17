@@ -18,8 +18,8 @@ raw_yield_train <- raw_yield_train %>% select("Env","Date_Planted", "Date_Harves
 #for consistency, rename 'Date_Harvested' label in Yield data frame to 'Date'
 names(raw_yield_train)[names(raw_yield_train) == "Date_Harvested"] <- "Date"
 
-# Look for initial cleansing indicators for raw data frames
-# df: raw_wx_train or raw_yield_train data frame
+# Function to Look for initial cleansing indicators in raw data frames
+#   df: raw_wx_train or raw_yield_train data frame
 initial_summary <- function (df) {
   na_counts <- sapply(df, function(x) sum(is.na(x)))
   tot_rows <- nrow(df)
@@ -66,9 +66,6 @@ initial_summary <- function (df) {
   }
   return(list(summary = stat_summ, outliers = outliers_list))
 }
-
-wx_rawdata_summary <- initial_summary(raw_wx_train)
-yld_rawdata_summmary <- initial_summary(raw_yield_train)
 
 saveRDS(raw_meta_train, "data_wrangling/raw_meta_train.rds")
 saveRDS(raw_wx_train, "data_wrangling/raw_wx_train.rds")

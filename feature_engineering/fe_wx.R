@@ -3,6 +3,10 @@ library(lubridate)
 
 processing_wx_train <- readRDS("data_wrangling/processing_wx_train.rds")
 
+# Function to engineer weather features for lstm model
+#   df: processing_wx_train 
+#   start, end: integer values representing desired start and end months of
+#               growth season
 generate_features <- function(df, start, end) {
   
   gs_features <- df %>%
@@ -30,7 +34,9 @@ generate_features <- function(df, start, end) {
 }
 
 
-#helper function to calculate growing degree days
+# Helper function to calculate growing degree days
+#   tmax, tmin: maxima and minima temps for a given day. Units in Celsius
+#   base_temp: 10 degrees Celsuis as per professional standards
 calculate_gdd <- function(tmax, tmin, base_temp = 10) {
   
   tmax <- pmin(tmax, 30)
@@ -39,9 +45,9 @@ calculate_gdd <- function(tmax, tmin, base_temp = 10) {
   return(gdd)
 }
 
-# Helper function to calculate VPD
-# temp_c: Uses wet bulb temperature in Celsius 
-# rh_percent: relative humidity (%) represented as a value between 0-100
+# Helper function to calculate Vapour Pressure Deficit
+#   temp_c: Uses wet bulb temperature in Celsius 
+#   rh_percent: relative humidity (%) represented as a value between 0-100
 calculate_vpd <- function(temp_c, rh_percent) {
   
   # Calculate saturation vapor pressure (kPa)

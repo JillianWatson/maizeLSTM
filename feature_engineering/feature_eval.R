@@ -6,8 +6,8 @@ library(scales)
 GS_Wx <- readRDS("feature_engineering/GS_Wx.rds")
 Annual_Yields <- readRDS("feature_engineering/Annual_Yields.rds")
 
-#Function to help determine scale transformations needed for wx features
-#GS_Wx: growth season weather data frame
+# Function to help determine scale transformations needed for wx features
+#   GS_Wx: growth season weather data frame
 wx_feature_distribution <- function(GS_Wx){
   convert_long <- GS_Wx %>%
     select("mean_temp", "mean_vpd", "total_precip", "gdd_sum") %>%
@@ -26,7 +26,11 @@ wx_feature_distribution <- function(GS_Wx){
   return(feature_skew)
 }
 
-#find non-matching entries in each df
+# TODO: filter for minimum consecutive sequences >= 3
+# TODO: cross correlation analysis btwn dependent and indepndent variables
+# TODO: volatility, trend, autocorrelation examination on yield
+
+# Function to determine if there exists non-matching entries in both df's
 join_compatibiliy <- function(GS_Wx, Annual_Yields) {
   wx_size <- nrow(GS_Wx)
   yld_size <- nrow(Annual_Yields)
@@ -35,11 +39,6 @@ join_compatibiliy <- function(GS_Wx, Annual_Yields) {
   yld_loc <- unique(Annual_Yields$Location)
   Wx_yr <- unique(GS_Wx$Year)
   yld_yr <- unique(Annual_Yields$Year)
-
-  missing_loc <- setdiff(yld_loc, Wx_loc)
-  extra_loc <- setdiff(Wx_loc, yld_loc)
-  missing_yr <- setdiff(yld_yr, Wx_yr)
-  extra_yr <- setdiff(Wx_yr, yld_yr)
 
   #number of observations
   wx_counts <- GS_Wx %>%
@@ -62,12 +61,6 @@ join_compatibiliy <- function(GS_Wx, Annual_Yields) {
       yield_observations = yld_size,
       size_difference = yld_size - wx_size
     ),
-    mismatches = list(
-      missing_weather = missing_loc,
-      missing_yields = extra_loc,
-      weather_years = missing_yr,
-      yield_years = extra_yr
-    ),
     join_summary = join_analysis %>%
       summarise(
         total_combinations = n(),
@@ -80,14 +73,32 @@ join_compatibiliy <- function(GS_Wx, Annual_Yields) {
   return(join_stats)
 }
 
-temp <- join_compatibiliy(GS_Wx, Annual_Yields)
-print(temp)
+# Function to print mismatched observations and subsequent deletion
+find_mismatched_observations <- function(GS_Wx, Annual_Yields) {
+  # Create location-year combinations for weather data
+  wx_combinations <- GS_Wx %>%
+    select(Location, Year) %>%
+    distinct()
+  
+  # Create location-year combinations for yield data
+  yield_combinations <- Annual_Yields %>%
+    select(Location, Year) %>%
+    distinct()
+  
+  # Find yield observations without corresponding weather data
+  mismatched_observations <- yield_combinations %>%
+    anti_join(wx_combinations, by = c("Location", "Year")) %>%
+    arrange(Location, Year)
+  
+  return(mismatched_observations)
+}
 
-# wx_skew <- wx_feature_distribution(GS_Wx)
-# print(wx_skew)
+# Find and print the mismatches
+mismatches <- find_mismatched_observations(GS_Wx, Annual_Yields)
+print("Observations in yield data without corresponding weather data:")
+print(mismatches)
 
-
-
+# TODO: delete mismatches
 
 #Prep data for NN
 lstm_sequences <- function(GS_Wx, Annual_Yields, seq_len = 3) {

@@ -40,7 +40,12 @@ plot_network_metrics <- function(results_df) {
   grid.arrange(p1, p2, ncol = 1)
 }
 
-#visualize 2d graphical network of weather station locations provided a specific value of k and distance threshold
+# Function to visualize 2D graphical network of weather station locations
+# provided by a specific value of k and distance threshold
+#   coordinates: latitude x longitude of weather stations, units:Decimal Distance
+#   adj_matrix:
+#   k: value representing max number of connections to 
+#   dist_threshold: 
 plot_spatial_network <- function(coordinates, adj_matrix, k, dist_threshold) {
   
   nodes <- data.frame(
@@ -76,7 +81,10 @@ plot_spatial_network <- function(coordinates, adj_matrix, k, dist_threshold) {
   
 }
 
-#heatmap of connectivity
+# Function to plot a heat map of connectivity
+#   results_df: df that contains all attempts of station network building
+#               for many specified values of k and distance threshold. 
+#               Imported from bounded_neighborhood/build.R file. 
 plot_connectivity_heatmap <- function(results_df) {
   ggplot(results_df, aes(x = factor(k), y = factor(distance_thresholds), fill = avg_connections)) + 
     geom_tile() + 
@@ -90,10 +98,10 @@ plot_connectivity_heatmap <- function(results_df) {
     )
 }
 
-#plot_network_metrics(results_df)
 
 #select which values of k and dist to visualize
+#from analyses, k=10 and dist=100 provide satisfactory results
 adj_matrix <- adj_matrices[["k_10_dist_100"]]
-#plot_spatial_network(coordinates, adj_matrix, k = 10, dist_threshold = 100)
 
-plot_connectivity_heatmap(results_df)
+
+
