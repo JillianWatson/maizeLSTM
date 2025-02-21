@@ -1,7 +1,8 @@
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(scales)
+library(trend)
+library(tseries)
 
 GS_Wx <- readRDS("feature_engineering/GS_Wx.rds")
 Annual_Yields <- readRDS("feature_engineering/Annual_Yields.rds")
@@ -26,54 +27,333 @@ wx_feature_distribution <- function(GS_Wx){
   return(feature_skew)
 }
 
-# TODO: filter for minimum consecutive sequences >= 3
-# TODO: cross correlation analysis btwn dependent and indepndent variables
-# TODO: volatility, trend, autocorrelation examination on yield
+# TODO: cross correlation analysis btwn dependent and independent variables
 
-# Function to determine if there exists non-matching entries in both df's
-join_compatibiliy <- function(GS_Wx, Annual_Yields) {
-  wx_size <- nrow(GS_Wx)
-  yld_size <- nrow(Annual_Yields)
-  
-  Wx_loc <- unique(GS_Wx$Location)
-  yld_loc <- unique(Annual_Yields$Location)
-  Wx_yr <- unique(GS_Wx$Year)
-  yld_yr <- unique(Annual_Yields$Year)
 
-  #number of observations
-  wx_counts <- GS_Wx %>%
-    group_by(Location, Year) %>%
-    summarise(wx_count = n(), .groups = 'drop')
+# Function to analyse yield trends for each location, using the longest
+# consecutive sequence available
+#   min_consec_seq: minimum consecutive sequence allowed
+analyse_yield_sequences <- function(Annual_Yields, min_consec_seq = 3) {
   
-  yld_counts <- Annual_Yields %>%
-    group_by(Location, Year) %>%
-    summarise(yld_count = n(), .groups = 'drop')
+  # Helper function to find longest consecutive sequence of data in a single 
+  # location
+  longest_consec_seq <- function(location) {
+    years <- sort(location$Year)
+    
+    if (length(years) <= 1) {
+      
+      warning(paste("Only 1 data input for location: ", location$Location[1]))
+      return(years)
+    }
+    
+    year_diffs <- diff(years)
+    gap_position <- which(year_diffs > 1)
+    
+    if (length(gap_position) == 0) {
+      
+      warning(paste("Complete consecutive sequences for location: ", location$Location[1]))
+      return(years)
+    }
+    
+    #split sequences where gaps occur
+    seq_start <- c(1, gap_position + 1)
+    seq_end <- c(gap_position, length(years))
+    
+    #find longest sequence
+    seq_lengths <- seq_end - seq_start + 1
+    get_longest_index <- which.max(seq_lengths)
+    longest_sequence <- years[seq_start[get_longest_index]: seq_end[get_longest_index]]
+    
+    return(longest_sequence)
+  }
   
-  join_analysis <- full_join(wx_counts, yld_counts, by = c("Location", "Year")) %>%
-    mutate(
-      wx_present = !is.na(wx_count),
-      yld_present = !is.na(yld_count)
+  
+  # Function for examining yield volatility, autocorr, trend analysis for a 
+  # single location
+  location_analysis <- function(location_data) {
+    loc_id <- location_data$Location[1]
+    
+    consecutive_years <- longest_consec_seq(location_data)
+    get_consec_data <- location_data %>%
+      filter(Year %in% consecutive_years) %>%
+      arrange(Year)
+    
+    if (nrow(get_consec_data) < min_consec_seq ) {
+      
+      warning(paste("Location: ", loc_id, " did not meet minimum seq criteria"))
+      return(NULL)
+    }
+    
+    #minimum sequence condition met, begin analyses
+    
+    time_series_object <- ts(get_consec_data$mean_yield,
+                            start = min(get_consec_data$Year),
+                            frequency = 1)
+    num_obs <- length(time_series_object)
+    
+    #calculate volatility
+    volatility <- sd(get_consec_data$mean_yield, na.rm = TRUE)
+    cv <- volatility / mean(get_consec_data$mean_yield, na.rm = TRUE) * 100
+    
+    #calculate year-over-year changes
+    if (num_obs > 1) {
+      
+      annual_change <- diff(get_consec_data$mean_yield) / get_consec_data$mean_yield[-length(get_consec_data$mean_yield)] * 100
+      volatility_annual_change <- sd(annual_change, na.rm = TRUE)
+      max_annual_change <- max(abs(annual_change), na.rm = TRUE)
+      positive_change <- sum(annual_change > 0, na.rm = TRUE) / length(annual_change)
+    } else {
+      
+      annual_change <- NA
+      volatility_annual_change <- NA
+      max_annual_change <- NA
+      positive_change <- NA
+    }
+    
+    #calculate trend analysis:
+    
+    #linear regression
+    if (num_obs >= 3) {
+      years_numeric <- 1:length(time_series_object)
+      trend_model <- lm(time_series_object ~ years_numeric)
+      trend_slope <- coef(trend_model)[2]
+      #p-value
+      trend_significance <- summary(trend_model)$coefficients[2,4] 
+      
+      tryCatch({
+        time_series_result <- sens.slope(time_series_object)
+        theil_sen_slope <- time_series_result$estimates
+        theil_sen_p_val <- time_series_result$p.value
+      }, error = function(e){
+            theil_sen_slope <- NA
+            theil_sen_p_val <- NA
+      })
+      
+      spearman_result <- cor.test(years_numeric, time_series_object, method = "spearman")
+      spearman_rho <- spearman_result$estimate
+      spearman_p_val <- spearman_result$p.value
+      
+    } else {
+        trend_slope <- NA
+        trend_significance <- NA
+        theil_sen_slope <- NA
+        theil_sen_p_val <- NA
+        spearman_rho <- NA
+        spearman_p_val <- NA
+    }
+    
+    #count consecutive increases/decreases
+    if (num_obs >= 3) {
+      yield_diff <- as.numeric(diff(time_series_object))
+      if (length(yield_diff) > 0) {
+        tryCatch({
+          runs <- rle(yield_diff > 0)
+          n_runs <- length(runs$lengths)
+          longest_run <- max(runs$lengths)
+          avg_run_length <- mean(runs$lengths)
+        }, error = function(e){
+          warning(paste("Failed to compute runs analysis for location: ", loc_id))
+          n_runs <- NA
+          longest_run <- NA
+          avg_run_length <- NA
+        })
+      } else {
+        n_runs <- NA
+        longest_run <- NA
+        avg_run_length <- NA
+      }
+    } else {
+      n_runs <- NA
+      longest_run <- NA
+      avg_run_length <- NA
+    }  
+    
+    #autocorrelation analysis
+    
+    if (num_obs >= 4) {
+      #set limit for smaller samples
+      lag_max <- min(num_obs -1 ,3)
+      acf_result <- tryCatch({
+        acf(time_series_object, lag.max = lag_max, plot = FALSE)
+      }, error = function(e){
+        list(acf = rep(NA, lag_max + 1))
+      })
+      
+      ac_lag1 <- if(length(acf_result$acf) > 1) acf_result$acf[2] else NA
+    
+      if (num_obs >= 6) {
+        ljung_box <- tryCatch({
+          Box.test(time_series_object, lag = min(2, num_obs - 2), type = 'Ljung-Box')
+        }, error = function(e){
+          list(p.value = NA)
+        })
+        ljung_box_p_val <- ljung_box$p.value
+      } else {
+        ljung_box_p_val <- NA
+      }  
+    } else {
+      ac_lag1 <- NA
+      ljung_box_p_val <- NA
+      acf_result <- list(acf = NA)
+    }
+    
+    #performance of metrics
+    
+    trend_reliability <- case_when(
+      num_obs >= 10 ~ "Good",
+      num_obs >= 6 ~ "Fair",
+      num_obs >= 3 ~ "Poor",
+      TRUE ~ "Insufficient"
     )
-  
-  join_stats <- list(
-    datasets_size = list(
-      weather_observations = wx_size,
-      yield_observations = yld_size,
-      size_difference = yld_size - wx_size
-    ),
-    join_summary = join_analysis %>%
-      summarise(
-        total_combinations = n(),
-        complete_matches = sum(wx_present & yld_present),
-        only_weather = sum(wx_present & !yld_present),
-        only_yield = sum(!wx_present & yld_present),
-        match_pct = round(100 * complete_matches / total_combinations, 2)
-      ) 
+    
+    autocorr_reliability <- case_when(
+      num_obs >= 20 ~ "Good",
+      num_obs >= 10 ~ "Fair",
+      num_obs >= 4 ~ "Poor",
+      TRUE ~ "Insufficient"
     )
-  return(join_stats)
+    
+    return(list(
+      location = loc_id,
+      n_years_total = nrow(location_data),
+      n_years_consecutive = num_obs,
+      consecutive_start = min(get_consec_data$Year),
+      consecutive_end = max(get_consec_data$Year),
+      
+      trend_reliability = trend_reliability,
+      autocorrelation_reliability = autocorr_reliability,
+      
+      volatility = volatility,
+      cv_percent = cv,
+      volatility_annual = volatility_annual_change,
+      max_annual_change = max_annual_change,
+      positive_change_ratio = positive_change,
+      
+      trend_slope = trend_slope,
+      trend_p_value = trend_significance,
+      theil_sen_slope = theil_sen_slope,
+      theil_sen_p_value = theil_sen_p_val,
+      spearman_rho = spearman_rho,
+      spearman_p = spearman_p_val,
+      
+      num_of_runs = n_runs,
+      longest_run = longest_run,
+      avg_run_length = avg_run_length,
+      
+      ac_lag1 = ac_lag1,
+      ljung_box_p_value = ljung_box_p_val,
+      
+      ts_data = list(
+        years = get_consec_data$Year,
+        yields = get_consec_data$mean_yield,
+        acf = acf_result$acf
+      )
+    ))  
+  }
+  
+  locations <- unique(Annual_Yields$Location)
+  results <- list()
+  skipped_info <- data.frame(
+    Location = character(),
+    Total_years = numeric(),
+    Max_consecutive = numeric(),
+    Year_available = character(),
+    Reason = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  for (loc in locations) {
+    loc_data <- Annual_Yields %>% filter(Location == loc)
+    years <- sort(loc_data$Year)
+    
+    if (length(years) > 1){
+      year_diffs <- diff(years)
+      gap_position <- which(year_diffs > 1)
+      
+      if (length(gap_position) == 0) {
+        max_consecutive <- length(years)
+        consecutive_years <- years
+      } else {
+        seq_start <- c(1, gap_position + 1)
+        seq_end <- c(gap_position, length(years))
+        seq_lengths <- seq_end - seq_start + 1
+        get_longest_index <- which.max(seq_lengths)
+        max_consecutive <- seq_lengths[get_longest_index]
+        consecutive_years <- years[seq_start[get_longest_index]: seq_end[get_longest_index]]
+      }
+    }else {
+      max_consecutive <- length(years)
+      consecutive_years <- years
+    }
+    
+    if (length(years) < min_consec_seq || max_consecutive < min_consec_seq) {
+      reason <- if (length(years) < min_consec_seq){
+        "Insufficient total years"
+      }else {
+        "Insufficient consecutive years"
+      }
+      skipped_info <- rbind(skipped_info, data.frame(
+        Location = loc,
+        Total_years = length(years),
+        Max_consecutive = max_consecutive,
+        Years_available = paste(years, collapse = ", "),
+        Reason = reason,
+        stringsAsFactors = FALSE
+      ))
+      next
+    }
+    results[[as.character(loc)]] <- location_analysis(loc_data)
+  }
+
+  n_skipped <- nrow(skipped_info)
+  
+  if (n_skipped > 0) {
+    warning(paste("Skipped", n_skipped, "locations due to having lack of data"))
+  }
+  
+  results$skipped_info <- skipped_info
+  
+  valid_sequences <- list()
+  for (loc in names(results)) {
+    if (loc != "skipped_locations") {
+      valid_sequences[[loc]] <- results[[loc]]$consecutive_years
+    }
+  }
+  
+  results$valid_sequences <- valid_sequences
+  
+  return(results) 
 }
 
-# Function to print mismatched observations and subsequent deletion
+
+# Function to filter Annual_Yields to keep valid consecutive sequences only
+filter_annual_yields <- function(Annual_Yields, Yield_analysis) {
+  valid_sequences <- Yield_analysis <- Yield_analysis$valid_sequences
+  
+  valid_combinations <- data.frame(
+    Location = character(),
+    Year = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  for (loc in names(valid_sequences)) {
+    years <- valid_sequences[[loc]]
+    valid_combinations <- rbind(valid_combinations,
+                                data.frame(
+                                  Location = loc,
+                                  Year = years,
+                                  stringsAsFactors = FALSE
+                                ))
+  }
+  filtered_data <- Annual_Yields %>%
+    inner_join(valid_combinations, by = c('Location', 'Year'))
+  
+  return(filtered_data)
+  
+}
+
+
+# Function to print mismatched observations btwn data frames, if any
 find_mismatched_observations <- function(GS_Wx, Annual_Yields) {
   # Create location-year combinations for weather data
   wx_combinations <- GS_Wx %>%
@@ -93,12 +373,16 @@ find_mismatched_observations <- function(GS_Wx, Annual_Yields) {
   return(mismatched_observations)
 }
 
-# Find and print the mismatches
-mismatches <- find_mismatched_observations(GS_Wx, Annual_Yields)
-print("Observations in yield data without corresponding weather data:")
-print(mismatches)
 
-# TODO: delete mismatches
+#Function Calls
+mismatches <- find_mismatched_observations(GS_Wx, Annual_Yields)
+
+Yield_analysis <- analyse_yield_sequences(Annual_Yields)
+
+skipped_locations <- Yield_analysis$skipped_info
+
+sequential_yields <- filter_annual_yields(Annual_Yields, Yield_analysis)
+
 
 #Prep data for NN
 lstm_sequences <- function(GS_Wx, Annual_Yields, seq_len = 3) {
@@ -107,7 +391,7 @@ lstm_sequences <- function(GS_Wx, Annual_Yields, seq_len = 3) {
     inner_join(Annual_Yields, by = c("SpatialLoc", "Year"))
   
   #TODO: scale features
-  #TODO: create sequences per each location
+  #TODO: create consecutive sequences per each location with seq lengths >= 3
   
   
 }
