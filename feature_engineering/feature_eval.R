@@ -4,8 +4,10 @@ library(tidyr)
 library(trend)
 library(tseries)
 
+#read in necessary data
 GS_Wx <- readRDS("feature_engineering/GS_Wx.rds")
 Annual_Yields <- readRDS("feature_engineering/Annual_Yields.rds")
+
 
 # Function to help determine scale transformations needed for wx features
 #   GS_Wx: growth season weather data frame
@@ -27,12 +29,11 @@ wx_feature_distribution <- function(GS_Wx){
   return(feature_skew)
 }
 
-# TODO: cross correlation analysis btwn dependent and independent variables
 
 
 # Function to analyse yield trends for each location, using the longest
 # consecutive sequence available
-#   min_consec_seq: minimum consecutive sequence allowed
+#   min_consec_seq: minimum consecutive sequences allowed
 analyse_yield_sequences <- function(Annual_Yields, min_consec_seq = 3) {
   
   # Helper function to find longest consecutive sequence of data in a single 
@@ -219,6 +220,7 @@ analyse_yield_sequences <- function(Annual_Yields, min_consec_seq = 3) {
       n_years_consecutive = num_obs,
       consecutive_start = min(get_consec_data$Year),
       consecutive_end = max(get_consec_data$Year),
+      consecutive_years = get_consec_data$Year,
       
       trend_reliability = trend_reliability,
       autocorrelation_reliability = autocorr_reliability,
@@ -315,8 +317,10 @@ analyse_yield_sequences <- function(Annual_Yields, min_consec_seq = 3) {
   
   valid_sequences <- list()
   for (loc in names(results)) {
-    if (loc != "skipped_locations") {
-      valid_sequences[[loc]] <- results[[loc]]$consecutive_years
+    if (loc != "skipped_info") {
+      if (!is.null(results[[loc]])) {
+        valid_sequences[[loc]] <- results[[loc]]$consecutive_years
+      }
     }
   }
   
@@ -326,9 +330,10 @@ analyse_yield_sequences <- function(Annual_Yields, min_consec_seq = 3) {
 }
 
 
+
 # Function to filter Annual_Yields to keep valid consecutive sequences only
 filter_annual_yields <- function(Annual_Yields, Yield_analysis) {
-  valid_sequences <- Yield_analysis <- Yield_analysis$valid_sequences
+  valid_sequences <- Yield_analysis$valid_sequences
   
   valid_combinations <- data.frame(
     Location = character(),
@@ -337,20 +342,26 @@ filter_annual_yields <- function(Annual_Yields, Yield_analysis) {
   )
   
   for (loc in names(valid_sequences)) {
-    years <- valid_sequences[[loc]]
-    valid_combinations <- rbind(valid_combinations,
+    if (!is.null(valid_sequences[[loc]])) {
+      years <- valid_sequences[[loc]]
+      valid_combinations <- rbind(valid_combinations,
                                 data.frame(
                                   Location = loc,
                                   Year = years,
                                   stringsAsFactors = FALSE
                                 ))
+    }
   }
+  cat("Found", nrow(valid_combinations), "valid location-year combinations across", 
+      length(unique(valid_combinations$Location)), "locations\n")
   filtered_data <- Annual_Yields %>%
     inner_join(valid_combinations, by = c('Location', 'Year'))
+  cat("Filtered Annual Yields df from", nrow(Annual_Yields), "to", nrow(filtered_data), "rows\n")
   
   return(filtered_data)
   
 }
+
 
 
 # Function to print mismatched observations btwn data frames, if any
@@ -374,6 +385,7 @@ find_mismatched_observations <- function(GS_Wx, Annual_Yields) {
 }
 
 
+
 #Function Calls
 mismatches <- find_mismatched_observations(GS_Wx, Annual_Yields)
 
@@ -382,16 +394,7 @@ Yield_analysis <- analyse_yield_sequences(Annual_Yields)
 skipped_locations <- Yield_analysis$skipped_info
 
 sequential_yields <- filter_annual_yields(Annual_Yields, Yield_analysis)
+saveRDS(sequential_yields, "feature_engineering/Yield-tojoin.rds")
 
 
-#Prep data for NN
-lstm_sequences <- function(GS_Wx, Annual_Yields, seq_len = 3) {
-  
-  join_data <- GS_Wx %>%
-    inner_join(Annual_Yields, by = c("SpatialLoc", "Year"))
-  
-  #TODO: scale features
-  #TODO: create consecutive sequences per each location with seq lengths >= 3
-  
-  
-}
+
