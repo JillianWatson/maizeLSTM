@@ -1,19 +1,21 @@
-raw_meta_train <- readRDS("data_wrangling/raw_meta_train.rds")
-raw_wx_train <- readRDS("data_wrangling/raw_wx_train.rds")
-raw_yield_train <- readRDS("data_wrangling/raw_yield_train.rds")
+library(zoo)
 
-###### Data used in this file has NOT been normalized ######
+raw_meta <- readRDS("data_wrangling/raw_meta_train.rds")
+raw_wx <- readRDS("data_wrangling/raw_wx_train.rds")
+raw_yield <- readRDS("data_wrangling/raw_yield_train.rds")
+
+#------------------ Data used in this file has NOT been normalized ------------------
 
 # Helper Function to extract location codes for easier grouping based on spatial
 # patterns
-# env: Env field in data frames
+#   env: Env field in data frames
 
 extract_location <- function(env) {
   location <- sub("_\\d{4}", "", env)
   return(location)
 }
 
-###################### YIELD DATA ##########################
+#------------------ YIELD DATA ------------------
 
 #First Transform Step 
 #
@@ -21,7 +23,7 @@ extract_location <- function(env) {
 #Yield values do not have seasonal trends and are recorded on one day per year
 #we will use year column for organizational purposes rather the date column
 
-processing_yield_train <- raw_yield_train %>%
+processing_yield_train <- raw_yield %>%
   mutate(
     Year = as.numeric(sub(".*_(\\d{4})$", "\\1", Env))
   )
@@ -55,9 +57,9 @@ processing_yield_train <- processing_yield_train %>%
   group_by(SpatialLoc, Year)
 
 
-####################### WEATHER DATA ########################
+#------------------ WEATHER DATA -------------------
 
-processing_wx_train <- raw_wx_train %>%
+processing_wx_train <- raw_wx %>%
   mutate(
     SpatialLoc = extract_location(Env)
   ) %>%
@@ -67,12 +69,12 @@ processing_wx_train <- raw_wx_train %>%
   arrange(SpatialLoc, Year) %>%
   group_by(SpatialLoc, Year)
 
-####################### META DATA ############################
+#------------------ META DATA #------------------
 
 #First Transform Step
 #
 #Extract location codes
-processing_meta_train <- raw_meta_train %>%
+processing_meta_train <- raw_meta %>%
   mutate(
     SpatialLoc = extract_location(Env)
   ) %>%
@@ -135,6 +137,7 @@ for (loc in unique(processing_meta_train$SpatialLoc)) {
   }
 }
 
+
 #from manual analysis of meta data (City, Farm), fixed some imputed coordinates for 
 #better representation of location
 
@@ -183,10 +186,12 @@ processing_meta_train$Impute_lat[processing_meta_train$SpatialLoc == "TXH4"][1] 
 processing_meta_train$Impute_long[processing_meta_train$SpatialLoc == "TXH4"][1] <- txh2_2014$Longitude
 
 
-######################## Check Matching Keys between selected data frames ######################
+#------------------ Validate Matching Keys Between Selected Data Frames #------------------
 
+# Function to find matching keys between 2 df's
 # key formally exists as 'Env' in raw data, now re categorized to 'SpatialLoc'
 # in any processed data frames
+#   df1, df2: any of the df's created in this file. Have prefix 'processing'.
 
 find_matching_keys <- function(df1, df2) {
 

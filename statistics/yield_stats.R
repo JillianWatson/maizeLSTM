@@ -3,8 +3,10 @@ library(lubridate)
 library(tidyverse)
 
 
-processing_yield_train <- readRDS("processing_yield_train.rds")
+processing_yield_train <- readRDS("data_wrangling/processing_yield_train.rds")
 
+# Helper Function to manually edit various date formats in processing_yield df
+# date_vector: pass Date feature from a data frame
 parse_raw_dates <- function(date_vector) {
   
   if(any(is.na(date_vector))) {
@@ -71,8 +73,7 @@ names(Planted_parsed) <- NULL
 names(Harvested_parsed) <- NULL
 
 
-#determine common growth season
-
+#determine most common growth season among data (start and end months)
 startof_season <- data.frame(Date_Planted = Planted_parsed) %>% mutate(
   planted_month = month(Date_Planted),
   month_name = month(Date_Planted, label = TRUE)
