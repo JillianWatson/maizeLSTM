@@ -32,6 +32,7 @@ join_data <- function(Yield, Weather) {
 }
 
 joined_dataset <- join_data(Yield, Weather)
+saveRDS(joined_dataset, "feature_engineering/joined_dataset.rds")
 
 #Prep data for NN: matrix, scale, etc. 
 lstm_sequences <- function(GS_Wx, Annual_Yields, seq_len = 3) {
