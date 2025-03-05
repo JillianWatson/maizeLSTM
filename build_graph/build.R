@@ -1,7 +1,6 @@
 library(sf)
 library(Matrix)
 library(tidyverse)
-library(torch)
 
 
 meta_data <- readRDS("data_wrangling/processing_meta_train.rds")
@@ -20,7 +19,7 @@ coordinates <- valid_metadata %>%
 
 
 
-# Helper function to calculate real distances (in km) between
+# Helper function to calculate distances (in km) between
   # 2 geographical points. 
 calculate_distance_km <- function(lat1, long1, lat2, long2) {
   dist_lat <- abs(lat1 - lat2) * 110.574 
@@ -31,9 +30,9 @@ calculate_distance_km <- function(lat1, long1, lat2, long2) {
 
 
 
-# Function to cluster weather stations based on proximity
+# Function to cluster weather stations based on distance proximity
   #coordinates: df that contains lat x long coords of weather stations, units:Decimal Distance
-  #threshold: distance (float) in km that determines if a location belongs to a cluster
+  #threshold: distance (int) in km that determines if a location belongs to a cluster
 cluster_weather_stations <- function(coordinates, threshold) {
   n_stations <- nrow(coordinates)
   
@@ -56,7 +55,7 @@ cluster_weather_stations <- function(coordinates, threshold) {
             coordinates$Impute_lat[j],
             coordinates$Impute_long[j]
           )
-          #add location to cluster if it falls in threshold
+          #add location to cluster if it falls within threshold
           if (total_distance <= threshold) {
             current_cluster <- c(current_cluster, j)
             assigned[j] <- TRUE
@@ -120,6 +119,8 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
           coordinates$Latitude[j],
           coordinates$Longitude[j]
         )
+      } else {
+        dist_matrix[i,j] <- Inf
       }
     }
   }
@@ -138,51 +139,100 @@ create_distance_network <- function(coordinates, k_max, distance_threshold) {
       #sort by distance
       sorted_nbrs <- valid_neighbours[order(distances[valid_neighbours])]
       #use nearest connections up to k_max
-      connected_nbrs <- sorted_nbrs[1:min(k_max, length(sorted_nbrs))]
+      k <- min(k_max, length(sorted_nbrs))
+      connected_nbrs <- sorted_nbrs[1:k]
     
       #create connections  
       adj_matrix[i, connected_nbrs] <- 1
     }
   }
+  #make adjacency matrix undirected
+  undirected_adj_matrix <- (adj_matrix + t(adj_matrix))
+  undirected_adj_matrix@x[] <- 1
   
-  return(adj_matrix)
+  #calculate summary statistics
+  connections_per_node <- rowSums(undirected_adj_matrix)
+  avg_conn <- mean(connections_per_node)
+  min_conn <- min(connections_per_node)
+  max_conn <- max(connections_per_node)
+  isolated <- sum(connections_per_node == 0)
+  
+  return(list(
+    adjacency_matrix = undirected_adj_matrix,
+    connections = connections_per_node,
+    avg_connections = avg_conn,
+    isolated_nodes = isolated
+  ))
+}
+
+
+#Function to filter out outlier locations
+#from previous analyses, a European station was located. Our geographic
+#area of concern is the USA.
+filter_outlier_clusters <- function(centroids) {
+  
+  #positive longitudinal values are indicative of European locations
+  get_indices <- which(centroids$Longitude > 0) 
+  
+  if (length(get_indices) > 0) {
+    europe_clusters <- centroids[get_indices, ]
+    print(europe_clusters)
+    
+    filtered_centroids <- centroids[-get_indices, ]
+    return(list(
+      filtered_centroids = filtered_centroids,
+      removed_indices = get_indices
+    ))
+  }
 }
 
 
 #------------------ Main Execution ------------------#  
 
-#Create clusters from individual stations
+#create clusters from individual stations
 cat("Performing station clustering...\n")
-cluster_threshold_km <- 25.0  
+cluster_threshold_km <- 100   
 clustering_results <- cluster_weather_stations(coordinates, cluster_threshold_km)
 
-cat("Created", nrow(clustering_results$cluster_centroids), "clusters from", nrow(coordinates), "stations\n")
+#call filtering function
+cat("\nFiltering out outlier clusters\n")
+filter_result <- filter_outlier_clusters(clustering_results$cluster_centroids)
+filtered_centroids <- filter_result$filtered_centroids
 
-# Display some cluster statistics
-cluster_sizes <- table(clustering_results$station_to_cluster$cluster_id)
-cat("Cluster sizes (stations per cluster):\n")
-print(cluster_sizes)
+if (length(filter_result$removed_indices) > 0) {
+  removed_cluster_ids <- filter_result$removed_indices
+  #mark removed stations
+  affected_stations <- which(clustering_results$station_to_cluster$Cluster_id %in% removed_cluster_ids)
+  
+  if (length(affected_stations) > 0) {
+    cat("Removing ", length(affected_stations), "stations belonging to outlier clusters\n")
+    #set Cluster_id to NA
+    clustering_results$station_to_cluster$Cluster_id[affected_stations] <- NA
+  }
+}
 
 #create network btwn clusters
+
 #number of connections to try
-k <- c(4,10,15,20,25)
+k <- c(5, 10, 15, 20)
 
-distance_thresholds <- c(50.0, 100.0, 150.0, 200.0) #represented as kilometers
+distance_thresholds <- c(350, 450, 500, 600, 700) #represented as kilometers
 
-adj_matrices <- list()
+network_results <- list()
 results_df <- data.frame()
 
-#run distance network for different values of k and distance threshold
+
+#run network for different values of k and distance threshold
 cat("\nCreating distance networks between clusters...\n")
 for (value in k) {
   for (dist in distance_thresholds) {
-    adj_matrix <- create_distance_network(
-      clustering_results$cluster_centroids,
+    result <- create_distance_network(
+      filtered_centroids,
       k_max = value,
       distance_threshold = dist
     )
     matrix_key <- paste("k", value, "dist", dist, sep = "_")
-    adj_matrices[[matrix_key]] <- adj_matrix
+    network_results[[matrix_key]] <- result
     
     #evaluate connections
     avg_connections <- mean(rowSums(adj_matrix))
@@ -191,40 +241,46 @@ for (value in k) {
     results_df <- rbind(results_df, data.frame(
       k = value,
       distance_thresholds = dist,
-      avg_connections = avg_connections,
-      isolated_clusters = isolated_clusters
+      avg_connections = result$avg_connections,
+      isolated_nodes = result$isolated_nodes
     ))
-    
-    #print results for each k
-    cat(sprintf("\nResults for k = %d , distance threshold = %d km: ", value, dist))
-    cat(sprintf("\nAverage connections per location: %.2f ", avg_connections))
-    cat(sprintf("\nNumber of isolated locations: %d\n ", isolated_locations ))
-    
   }  
 }
 
-# Create directory if it doesn't exist
+
+#print cluster summary:
+cat("Created", nrow(clustering_results$cluster_centroids), "clusters from", nrow(coordinates), "stations\n")
+cluster_sizes <- table(clustering_results$station_to_cluster$Cluster_id)
+cat("Cluster sizes (stations per cluster):\n")
+print(cluster_sizes)
+
+#print network results summary:
+cat("\nNetwork parameters summary:\n")
+print(results_df)
+
+#create directory if it doesn't exist
 if (!dir.exists("build_graph")) {
   dir.create("build_graph", recursive = TRUE)
 }
+
+
+#create edge index using optimized network parameters:
+  #cluster threshold = 100 km
+  #k_max = 10
+  #distance threshold = 700 km
+optimal_network <- network_results[["k_10_dist_700"]]$adjacency_matrix
+edge_index <- which(optimal_network == 1, arr.ind = TRUE) %>%
+  t()
   
+
+
 #save results
-saveRDS(adj_matrices, "build_graph/adj_matrices.rds")
-saveRDS(results_df, "build_graph/results_df.rds")
+saveRDS(edge_index, "build_graph/edge_index_matrix.rds")
+saveRDS(network_results, "build_graph/network_results.rds")
+saveRDS(results_df, "build_graph/parameters_summary.rds")
 saveRDS(coordinates, "build_graph/coordinates.rds")
-saveRDS(clustering_results$cluster_centroids, "build_graph/cluster_centroids.rds")
-saveRDS(clustering_results$station_to_cluster, "build_graph/station_to_cluster.rds")
-saveRDS(clustering_results$clusters, "build_graph/clusters.rds")
+saveRDS(filtered_centroids, "build_graph/centroids.rds")
 
-
-#for gnn
-#selected_adj_matrix <- adj_matrices[["k_10_dist_150"]]
-
-edge_index <- which(selected_adj_matrix == 1, arr.ind = TRUE) %>%
-  t() %>%
-  torch_tensor()
-
-saveRDS(edge_index, "build_graph/edge_index.rds")
   
   
 
