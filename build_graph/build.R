@@ -12,11 +12,24 @@ meta_data <- meta_data %>% rename(Location = SpatialLoc)
 
 valid_metadata <- meta_data %>% filter(Location %in% valid_locations)
 
-coordinates <- valid_metadata %>% 
+coordinates_duplicates <- valid_metadata %>% 
   ungroup() %>%
   distinct(Impute_lat, Impute_long, .keep_all = TRUE) %>%
   select(Impute_lat, Impute_long, Location)
 
+cat("Original coordinates count:", nrow(coordinates_duplicates), "\n")
+
+#filter coordinates df to select 1 representative coordinate pair
+# per each Location ID
+coordinates_filtered <- coordinates_duplicates %>%
+  group_by(Location) %>%
+  summarise(
+    Impute_lat = median(Impute_lat),
+    Impute_long = median(Impute_long)
+  ) %>%
+  ungroup()
+
+cat("Reduced by:", nrow(coordinates_duplicates) - nrow(coordinates_filtered), "entries\n")
 
 
 # Helper function to calculate distances (in km) between
@@ -31,7 +44,7 @@ calculate_distance_km <- function(lat1, long1, lat2, long2) {
 
 
 # Function to cluster weather stations based on distance proximity
-  #coordinates: df that contains lat x long coords of weather stations, units:Decimal Distance
+  #coordinates: filtered df that contains lat x long coords of weather stations, units:Decimal Distance
   #threshold: distance (int) in km that determines if a location belongs to a cluster
 cluster_weather_stations <- function(coordinates, threshold) {
   n_stations <- nrow(coordinates)
@@ -100,7 +113,7 @@ cluster_weather_stations <- function(coordinates, threshold) {
   
   
 # Function to generate distance network between clusters
-  # coordinates: lat x long coords of weather stations, units:Decimal Distance
+  # coordinates: filtered lat x long coords of weather stations, units:Decimal Distance
   # k_max: an array of integers representing the max amount of connections 
   #        a node can have
   # distance_threshold: the upper limit condition that allows 2 nodes to form
@@ -176,12 +189,16 @@ filter_outlier_clusters <- function(centroids) {
   
   if (length(get_indices) > 0) {
     europe_clusters <- centroids[get_indices, ]
-    print(europe_clusters)
     
     filtered_centroids <- centroids[-get_indices, ]
     return(list(
       filtered_centroids = filtered_centroids,
       removed_indices = get_indices
+    ))
+  } else {
+    return(list(
+      filtered_centroids = centroids,
+      removed_indices = integer(0)
     ))
   }
 }
@@ -191,13 +208,16 @@ filter_outlier_clusters <- function(centroids) {
 
 #create clusters from individual stations
 cat("Performing station clustering...\n")
-cluster_threshold_km <- 100   
-clustering_results <- cluster_weather_stations(coordinates, cluster_threshold_km)
+cluster_threshold_km <- 200  
+clustering_results <- cluster_weather_stations(coordinates_filtered, cluster_threshold_km)
 
 #call filtering function
 cat("\nFiltering out outlier clusters\n")
 filter_result <- filter_outlier_clusters(clustering_results$cluster_centroids)
 filtered_centroids <- filter_result$filtered_centroids
+
+#tracking df to map location IDs to clusters
+location_cluster_mapping <- clustering_results$station_to_cluster
 
 if (length(filter_result$removed_indices) > 0) {
   removed_cluster_ids <- filter_result$removed_indices
@@ -208,8 +228,17 @@ if (length(filter_result$removed_indices) > 0) {
     cat("Removing ", length(affected_stations), "stations belonging to outlier clusters\n")
     #set Cluster_id to NA
     clustering_results$station_to_cluster$Cluster_id[affected_stations] <- NA
+    location_cluster_mapping$Cluster_id[affected_stations] <- NA
   }
 }
+#filter out NA values 
+if (any(is.na(filtered_centroids$Cluster_id))) {
+  cat("Removing NA entries from filtered centroids\n")
+  filtered_centroids <- filtered_centroids %>% filter(!is.na(Cluster_id))
+}
+
+cat("Filtering out stations with NA cluster IDs\n")
+location_cluster_mapping <- location_cluster_mapping %>% filter(!is.na(Cluster_id))
 
 #create network btwn clusters
 
@@ -235,24 +264,20 @@ for (value in k) {
     network_results[[matrix_key]] <- result
     
     #evaluate connections
-    avg_connections <- mean(rowSums(adj_matrix))
-    isolated_clusters <- sum(rowSums(adj_matrix) == 0)
+    avg_connections <- result$avg_connections
+    isolated_clusters <- result$isolated_nodes
     
     results_df <- rbind(results_df, data.frame(
       k = value,
       distance_thresholds = dist,
-      avg_connections = result$avg_connections,
-      isolated_nodes = result$isolated_nodes
+      avg_connections = avg_connections,
+      isolated_clusters = isolated_clusters
     ))
   }  
 }
 
-
-#print cluster summary:
-cat("Created", nrow(clustering_results$cluster_centroids), "clusters from", nrow(coordinates), "stations\n")
-cluster_sizes <- table(clustering_results$station_to_cluster$Cluster_id)
-cat("Cluster sizes (stations per cluster):\n")
-print(cluster_sizes)
+#print filtered cluster info
+cat("\nAfter filtering, using", nrow(filtered_centroids), "valid clusters\n")
 
 #print network results summary:
 cat("\nNetwork parameters summary:\n")
@@ -265,24 +290,45 @@ if (!dir.exists("build_graph")) {
 
 
 #create edge index using optimized network parameters:
-  #cluster threshold = 100 km
+  #cluster threshold = 200 km
   #k_max = 10
   #distance threshold = 700 km
 optimal_network <- network_results[["k_10_dist_700"]]$adjacency_matrix
 edge_index <- which(optimal_network == 1, arr.ind = TRUE) %>%
   t()
   
+#create a final mapping df that connects Locations to their final Cluster assignments
+final_location_clusters <- location_cluster_mapping %>%
+  select(Location, Cluster_id) %>%
+  # Add cluster coordinates for reference
+  left_join(
+    filtered_centroids %>% 
+      rename(Cluster_id = Cluster_id,
+             Cluster_lat = Latitude,
+             Cluster_long = Longitude),
+    by = "Cluster_id"
+  )
 
+cat("\nLocation to cluster mapping sample (first 10 rows):\n")
+print(head(final_location_clusters, 10))
+
+#verify no NAs in the final data
+cat("\nChecking for NAs in final datasets:\n")
+cat("NAs in filtered_centroids:", sum(is.na(filtered_centroids)), "\n")
+cat("NAs in final_location_clusters:", sum(is.na(final_location_clusters)), "\n")
+cat("NAs in edge_index:", sum(is.na(edge_index)), "\n")
 
 #save results
 saveRDS(edge_index, "build_graph/edge_index_matrix.rds")
 saveRDS(network_results, "build_graph/network_results.rds")
 saveRDS(results_df, "build_graph/parameters_summary.rds")
-saveRDS(coordinates, "build_graph/coordinates.rds")
+saveRDS(coordinates_filtered, "build_graph/coordinates.rds")
 saveRDS(filtered_centroids, "build_graph/centroids.rds")
+saveRDS(final_location_clusters, "build_graph/location_cluster_mapping.rds")
 
-  
-  
+
+#diagnostic data: cluster info before filtering
+saveRDS(clustering_results, "build_graph/raw_clustering_results.rds")
 
 
 
