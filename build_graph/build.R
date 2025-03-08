@@ -240,6 +240,30 @@ if (any(is.na(filtered_centroids$Cluster_id))) {
 cat("Filtering out stations with NA cluster IDs\n")
 location_cluster_mapping <- location_cluster_mapping %>% filter(!is.na(Cluster_id))
 
+#If outliers removed, reindex clusters to ensure consecutive IDs (no gaps)
+if (length(filter_result$removed_indices) > 0) {
+  cat("\nReindexing clusters to ensure consecutive IDs...\n")
+  
+  # Create mapping from old to new IDs
+  old_cluster_ids <- filtered_centroids$Cluster_id
+  new_cluster_ids <- 1:length(old_cluster_ids)
+  id_mapping <- data.frame(
+    old_id = old_cluster_ids,
+    new_id = new_cluster_ids
+  )
+  
+  # Update cluster IDs in centroids
+  filtered_centroids$Cluster_id <- new_cluster_ids
+  
+  # Update cluster IDs in mapping dataframe
+  location_cluster_mapping$Cluster_id <- id_mapping$new_id[match(location_cluster_mapping$Cluster_id, id_mapping$old_id)]
+  
+  cat("Reindexed clusters from", min(old_cluster_ids), "to", max(old_cluster_ids), 
+      "now ranging from 1 to", max(new_cluster_ids), "\n")
+}
+
+
+
 #create network btwn clusters
 
 #number of connections to try

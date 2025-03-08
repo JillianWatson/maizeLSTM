@@ -281,7 +281,7 @@ p <- p +
 p <- p + coord_fixed(ratio = 1.3, xlim = c(-125, -65), ylim = c(25, 50))
 
 tryCatch({
-  ggsave("weather_station_network_map.png", p, width = 14, height = 10, dpi = 300)
+  ggsave("map_network_visuals/weather_station_network_map.png", p, width = 14, height = 10, dpi = 300)
   cat("Main visualization saved as 'weather_station_network_map.png'\n")
 }, error = function(e) {
   cat("ERROR: Failed to save main visualization:", e$message, "\n")
@@ -323,7 +323,7 @@ if(nrow(valid_nodes) > 0) {
     )
   
   tryCatch({
-    ggsave("station_count_distribution.png", p2, width = 8, height = 6, dpi = 300)
+    ggsave("map_network_visuals/station_count_distribution.png", p2, width = 8, height = 6, dpi = 300)
     cat("Station count distribution visualization saved as 'station_count_distribution.png'\n")
   }, error = function(e) {
     cat("ERROR: Failed to save station count distribution:", e$message, "\n")
@@ -344,7 +344,7 @@ if(nrow(valid_nodes) > 0) {
           axis.text.x = element_text(angle = 45, hjust = 1))
   
   tryCatch({
-    ggsave("clusters_by_region.png", p3, width = 8, height = 6, dpi = 300)
+    ggsave("map_network_visuals/clusters_by_region.png", p3, width = 8, height = 6, dpi = 300)
     cat("Region visualization saved as 'clusters_by_region.png'\n")
   }, error = function(e) {
     cat("ERROR: Failed to save region visualization:", e$message, "\n")
