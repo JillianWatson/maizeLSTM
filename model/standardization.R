@@ -1,6 +1,5 @@
 library(tidyverse)
 
-cat("Loading cluster yearly aggregates data...\n")
 cluster_yearly_aggregates <- readRDS("model/cluster_yearly_aggregates.rds")
 
 #data summary before standardization
@@ -19,7 +18,6 @@ feature_cols <- c(
 #columns to preserve as-is (identifiers, counts, and geographical information)
 id_cols <- c("Cluster_id", "Year", "Location_count", "Station_count", "Latitude", "Longitude")
 
-#ensure all columns to standardize exist in the data
 missing_cols <- setdiff(c(feature_cols), names(cluster_yearly_aggregates))
 if (length(missing_cols) > 0) {
   stop("The following columns are missing from the data: ", paste(missing_cols, collapse = ", "))
