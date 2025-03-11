@@ -1,6 +1,4 @@
 
-# TODO: analyse relations btwn dependent and independent variables
-
 Yield <- readRDS("feature_engineering/Yield-tojoin.rds")
 Weather <- readRDS("feature_engineering/Wx-tojoin.rds")
 
@@ -34,4 +32,6 @@ join_data <- function(Yield, Weather) {
 #save data
 joined_dataset <- join_data(Yield, Weather)
 saveRDS(joined_dataset, "feature_engineering/joined_dataset.rds")
+
+write.csv(joined_dataset, "feature_engineering/joined_dataset.csv", row.names = FALSE)
 

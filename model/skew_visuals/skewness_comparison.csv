@@ -1,0 +1,6 @@
+"original_feature","original_skewness","standardized_feature","standardized_skewness"
+"mean_temp_cluster",0.391155293212039,"std_mean_temp_cluster",0.391155293212038
+"mean_vpd_cluster",1.80134938241204,"std_mean_vpd_cluster",1.80134938241204
+"mean_yield_cluster",-0.342719454668938,"std_mean_yield_cluster",-0.342719454668937
+"total_precip_mean_cluster",0.219936833355314,"std_total_precip_mean_cluster",0.219936833355313
+"total_gdd_mean_cluster",0.354979759952034,"std_total_gdd_mean_cluster",0.354979759952034

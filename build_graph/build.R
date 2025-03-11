@@ -317,6 +317,7 @@ if (!dir.exists("build_graph")) {
   #cluster threshold = 200 km
   #k_max = 10
   #distance threshold = 700 km
+
 optimal_network <- network_results[["k_10_dist_700"]]$adjacency_matrix
 edge_index <- which(optimal_network == 1, arr.ind = TRUE) %>%
   t()

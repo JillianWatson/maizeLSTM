@@ -50,13 +50,6 @@ if (length(unmatched_locations) > 0) {
   cat("Removed", sum(!cluster_dataset$has_cluster), "records without cluster assignments\n")
 }
 
-#use existing Year column for time-based aggregation
-if (!"Year" %in% names(cluster_dataset)) {
-  stop("Error: Year column not found in joined_dataset. Please verify the dataset structure.")
-}
-
-#verify year range
-cat("Year range in dataset:", min(cluster_dataset$Year), "to", max(cluster_dataset$Year), "\n")
 
 # Function that defines aggregation functions that will be performed on each cluster node
 #  in the graph.
@@ -69,7 +62,7 @@ calculate_cluster_aggregates <- function(data) {
     "mean_temp", "total_precip", "mean_vpd", "gdd_sum", "mean_yield"
   )
   
-  #check which variables are actually in the dataset
+  #check which variables are in the dataset
   available_vars <- intersect(agg_vars, names(data))
   
   if (length(available_vars) == 0) {
@@ -88,20 +81,11 @@ calculate_cluster_aggregates <- function(data) {
       mean_temp_cluster = mean(mean_temp, na.rm = TRUE),
       mean_vpd_cluster = mean(mean_vpd, na.rm = TRUE),
       mean_yield_cluster = mean(mean_yield, na.rm = TRUE),
-      total_precip_cluster = mean(total_precip, na.rm = TRUE),
-      gdd_sum_cluster = mean(gdd_sum, na.rm = TRUE),
-      
-      #measure variability within each cluster
-      #for diagnostics, wont be used in model
-      mean_temp_sd = sd(mean_temp, na.rm = TRUE),
-      total_precip_sd = sd(total_precip, na.rm = TRUE),
-      mean_vpd_sd = sd(mean_vpd, na.rm = TRUE),
-      gdd_sum_sd = sd(gdd_sum, na.rm = TRUE),
-      mean_yield_sd = sd(mean_yield, na.rm = TRUE),
+      total_precip_mean_cluster = mean(total_precip, na.rm = TRUE),
+      total_gdd_mean_cluster = mean(gdd_sum, na.rm = TRUE),
       
       #count metrics 
       Location_count = n_distinct(Location),
-      Record_count = n(),
       .groups = "drop"
     )
   
@@ -158,6 +142,8 @@ summary_stats <- target_aggregates %>%
     Records = n(),
     Avg_locations_per_cluster = mean(Location_count, na.rm = TRUE)
   )
+
+write.csv(target_aggregates, "model/cluster_yearly_aggregates.csv", row.names = FALSE)
 
 cat("\nSummary statistics by year:\n")
 print(summary_stats)
