@@ -3,7 +3,8 @@ library(tidyverse)
 library(sf)
 library(maps)
 library(viridis)
-library(ggrepel) # For better label placement
+library(ggrepel)
+
 
 # Function to safely load RDS files
 safe_load_rds <- function(file_path, description) {
@@ -18,6 +19,7 @@ safe_load_rds <- function(file_path, description) {
   })
 }
 
+
 edge_index <- safe_load_rds("build_graph/edge_index_matrix.rds", "edge index")
 centroids <- safe_load_rds("build_graph/centroids.rds", "cluster centroids")
 network_results <- safe_load_rds("build_graph/network_results.rds", "network results")
@@ -28,6 +30,7 @@ if(is.null(edge_index) || is.null(centroids) || is.null(network_results)) {
   stop("Missing required data files. Run build.R first to generate.")
 }
 
+
 #diagnostic output
 cat("\n----- DATA SUMMARY -----\n")
 cat("Clusters:", nrow(centroids), "\n")
@@ -36,6 +39,7 @@ if(!is.null(location_mapping)) {
 }
 cat("Network connections:", dim(edge_index)[2], "\n")
 cat("-----------------------\n")
+
 
 #load specific network configuration
 if("k_10_dist_700" %in% names(network_results)) {
@@ -50,6 +54,7 @@ if(any(is.na(cluster_info$connections))) {
   cat("WARNING: There are NA values in the connections data\n")
 }
 
+
 #convert edge index to matrix format
 tryCatch({
   edge_data <- as.matrix(edge_index)
@@ -58,6 +63,7 @@ tryCatch({
   cat("ERROR: Failed to convert edge_index to matrix:", e$message, "\n")
   stop("Cannot continue without valid edge data")
 })
+
 
 #calculate station count per cluster
 if (!is.null(location_mapping)) {
@@ -123,6 +129,7 @@ if (!is.null(location_mapping)) {
     )
 }
 
+
 #create nodes df
 nodes <- data.frame(
   id = centroids_with_regions$Cluster_id,
@@ -186,6 +193,7 @@ tryCatch({
     cat("WARNING: Created empty edges dataframe to prevent errors\n")
   })
 })
+
 
 #join with node coordinates
 edges_with_coords <- edges %>%

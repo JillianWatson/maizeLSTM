@@ -117,7 +117,7 @@ if (sum(na_counts) > 0) {
 
 #create final dataset with graph structure information
 
-#convert edge_index to a more usable format if needed
+#convert edge_index to a more usable format
 edge_list <- data.frame(
   source = edge_index[1, ],
   target = edge_index[2, ]
