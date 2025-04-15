@@ -1,5 +1,6 @@
 library(tidyverse)
 library(data.table)
+library(jsonlite)
 
 model_ready_data <- readRDS("model/model_ready_data.rds")
 
@@ -290,3 +291,125 @@ for (cluster_id in unique(sapply(training_sequences, function(x) x$cluster_id)))
 }
 
 cat("Cluster-level validation completed with", validation_errors, "errors\n")
+
+cat("Begin exporting sequence splits for python model")
+
+
+# Function to convert sequence (as list) to data frame for exporting to csv
+#  sequence: list which contains test, train, or validation data
+sequences_to_df <- function(sequence){
+  
+  if (length(sequence) == 0) {
+    return(NULL)
+  }
+  
+  seq_df <- data.frame()
+  
+  for (i in 1:length(sequence)) {
+    seq <- sequence[[i]]
+    
+    #skip if any required field is missing or empty
+    if (is.null(seq$cluster_id) || is.null(seq$target_year) || 
+        length(seq$target_year) == 0 || is.null(seq$input_years) || 
+        is.null(seq$X) || is.null(seq$y)) {
+      cat("WARNING: Sequence", i, "is missing required fields. Skipping.\n")
+      next
+    }
+    
+    input_years <- seq$input_years
+    n_input_years <- length(input_years)
+    
+    cat("Processing sequence", i, "for cluster", seq$cluster_id, 
+        "with target year", seq$target_year, "- X dim:", dim(seq$X), "\n")
+    
+    row_data <- data.frame(
+      sequence_id = i,
+      cluster_id = seq$cluster_id,
+      target_year = seq$target_year[1]
+    )
+    
+    for (j in 1:n_input_years){
+      col_name <- paste0("input_year_", j)
+      row_data[[col_name]] <- input_years[j]
+    }
+    
+    #flatten matrices by row, do not transpose to preserve temporal structure
+    if (is.matrix(seq$X)) {
+      features_flat <- as.vector(seq$X)
+    } else if (is.vector(seq$X)) {
+      features_flat <- seq$X  #already a vector
+    } else {
+      cat("WARNING: Unexpected X type for sequence", i, ". Skipping.\n")
+      next
+    }
+    
+    for (j in 1:length(features_flat)) {
+      col_name <- paste0("feature_", j)
+      row_data[[col_name]] <- features_flat[j]
+    }
+    
+    
+    #add target value
+    if (length(seq$y) > 0) {
+      row_data$target_value <- seq$y[1]
+    } else {
+      cat("WARNING: Sequence", i, "has empty target value. Skipping.\n")
+      next
+    }
+    
+    seq_df <- rbind(seq_df, row_data)
+    
+  }
+  
+  return(seq_df)
+}
+
+
+#cluster split information
+cluster_splits_df <- cluster_splits %>% 
+  select(Cluster_id, n_years, n_train, n_val, n_test, insufficient)
+
+#insert years as their own cols (convert lists to strings)
+cluster_splits_df$years_json <- sapply(cluster_splits$years, function(x) toJSON(x))
+cluster_splits_df$train_years_json <- sapply(cluster_splits$train_years, function(x) toJSON(x))
+cluster_splits_df$validation_years_json <- sapply(cluster_splits$validation_years, function(x) toJSON(x %||% integer(0)))
+cluster_splits_df$test_years_json <- sapply(cluster_splits$test_years, function(x) toJSON(x %||% integer(0)))
+
+#parameter data
+params_df <- data.frame(
+  lookback_steps = LOOKBACK_STEPS,
+  min_seq_length = MIN_SEQ_LENGTH
+)
+
+
+#export each component to CSV
+train_df <- sequences_to_df(training_sequences)
+validation_df <- sequences_to_df(validation_sequences)
+test_df <- sequences_to_df(test_sequences)
+
+
+#save to csv
+if (!is.null(train_df) && nrow(train_df) > 0) {
+  write_csv(train_df, "py_model/train_sequences.csv")
+  cat("- Saved", nrow(train_df), "training sequences\n")
+} else {
+  cat("WARNING: No valid training sequences to export\n")
+}
+
+if (!is.null(validation_df) && nrow(validation_df) > 0) {
+  write_csv(validation_df, "py_model/validation_sequences.csv")
+  cat("- Saved", nrow(validation_df), "validation sequences\n")
+} else {
+  cat("WARNING: No valid validation sequences to export\n")
+}
+
+if (!is.null(test_df) && nrow(test_df) > 0) {
+  write_csv(test_df, "py_model/test_sequences.csv")
+  cat("- Saved", nrow(test_df), "test sequences\n")
+} else {
+  cat("WARNING: No valid test sequences to export\n")
+}
+write_csv(cluster_splits_df, "py_model/cluster_splits.csv")
+write_csv(params_df, "py_model/sequence_parameters.csv")
+
+

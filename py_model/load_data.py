@@ -5,6 +5,7 @@ import os
 from sklearn.model_selection import train_test_split
 
 def load_data():
+    #currently rds objects from R, need to make into csv format
     try: 
         model_data = pd.read_csv('model/model_ready_data.csv')
     except FileNotFoundError:
@@ -13,3 +14,4 @@ def load_data():
     edge_list = pd.read_csv('model/cluster_edge_list.csv')
 
     return model_data, edge_list
+

@@ -1,4 +1,4 @@
-re"Cluster_id","Year","mean_temp_cluster","mean_vpd_cluster","mean_yield_cluster","total_precip_mean_cluster","total_gdd_mean_cluster","Location_count","Latitude","Longitude","Station_count"
+"Cluster_id","Year","mean_temp_cluster","mean_vpd_cluster","mean_yield_cluster","total_precip_mean_cluster","total_gdd_mean_cluster","Location_count","Latitude","Longitude","Station_count"
 1,2016,24.7270108695652,0.88583000777064,3.9718718047761,487.44,2580.175,2,35.2016175,-90.418207,2
 1,2017,23.5967934782609,0.892134060889221,7.61609580027483,602.735,2408.875,2,35.2016175,-90.418207,2
 1,2018,24.8607065217391,0.860283425386045,5.66028188044133,612.03,2598.5875,2,35.2016175,-90.418207,2

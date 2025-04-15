@@ -1,7 +1,7 @@
 library(tidyverse)
 library(lubridate)
 
-#load datasets
+#load data sets
 joined_dataset <- readRDS("feature_engineering/joined_dataset.rds")
 location_cluster_mapping <- readRDS("build_graph/location_cluster_mapping.rds")
 filtered_centroids <- readRDS("build_graph/centroids.rds")
@@ -14,7 +14,7 @@ if ("Station_count" %in% names(location_cluster_mapping)) {
   cat("Removed Station_count from location_cluster_mapping\n")
 }
 
-#check that datasets loaded correctly
+#check that data sets loaded correctly
 cat("Loaded joined_dataset with", nrow(joined_dataset), "rows and", ncol(joined_dataset), "columns\n")
 cat("Loaded location_cluster_mapping with", nrow(location_cluster_mapping), "mappings\n")
 cat("Loaded filtered_centroids with", nrow(filtered_centroids), "clusters\n")
@@ -62,7 +62,7 @@ calculate_cluster_aggregates <- function(data) {
     "mean_temp", "total_precip", "mean_vpd", "gdd_sum", "mean_yield"
   )
   
-  #check which variables are in the dataset
+  #check which variables are in the data set
   available_vars <- intersect(agg_vars, names(data))
   
   if (length(available_vars) == 0) {
@@ -118,7 +118,7 @@ if (sum(na_counts) > 0) {
 #create final dataset with graph structure information
 
 #convert edge_index to a more usable format
-edge_list <- data.frame(
+edge_df <- data.frame(
   source = edge_index[1, ],
   target = edge_index[2, ]
 )
@@ -128,7 +128,7 @@ saveRDS(edge_list, "model/cluster_edge_list.rds")
 
 cluster_model_data <- list(
   yearly_aggregates = target_aggregates,
-  edge_list = edge_list,
+  edge_df = edge_df,
   clusters = filtered_centroids,
   location_mapping = location_cluster_mapping
 )
@@ -144,6 +144,7 @@ summary_stats <- target_aggregates %>%
   )
 
 write.csv(target_aggregates, "model/cluster_yearly_aggregates.csv", row.names = FALSE)
+write_csv(edge_df, "py_model/edge_df.csv")
 
 cat("\nSummary statistics by year:\n")
 print(summary_stats)

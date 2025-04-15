@@ -65,7 +65,7 @@ for (col in c(feature_cols)) {
     next
   }
   
-  #still use z-score standardization for all ranges but log any potential concerns
+  #still use z-score standardization for all ranges. log any potential concerns
   if (col_range < 1.0 && col != "mean_vpd_cluster") {
     cat(sprintf("Note: %s has a small range (%.4f). Standardization will proceed, but monitor for any issues.\n", 
                 col, col_range))
@@ -96,7 +96,7 @@ if (!has_problems) {
   cat("No NAs or infinite values found in standardized columns\n")
 }
 
-#create a dataset with only standardized features for modeling
+#create a data set with only standardized features for modeling
 model_ready_data <- standardized_data %>%
   select(
     #keep identifier columns
@@ -104,7 +104,7 @@ model_ready_data <- standardized_data %>%
     all_of(std_cols)
   )
 
-#check for missing values in final dataset
+#check for missing values in final data set
 na_counts <- colSums(is.na(model_ready_data))
 if (sum(na_counts) > 0) {
   cat("WARNING: Missing values detected in model_ready_data:\n")
@@ -112,8 +112,11 @@ if (sum(na_counts) > 0) {
 }
 
 saveRDS(feature_stats, "model/feature_stats.rds")
+write_csv(feature_stats, "py_model/standardized_data_stats.csv")
 saveRDS(standardized_data, "model/standardized_yearly_aggregates.rds")
 saveRDS(model_ready_data, "model/model_ready_data.rds")
+
+write.csv(model_ready_data, "model/standardized_data.csv", row.names = FALSE)
 
 cat("\nStandardization complete!\n")
 cat("- Full data with standardized features saved to: model/standardized_yearly_aggregates.rds\n")
