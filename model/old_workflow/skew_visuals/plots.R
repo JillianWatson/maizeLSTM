@@ -3,7 +3,7 @@ library(moments)
 library(gridExtra) 
 library(ggplot2)
 
-standardized_data <- readRDS("model/standardized_yearly_aggregates.rds")
+standardized_data <- readRDS("model/old_workflow/old_standardization_outputs/OLDstandardized_yearly_aggregates.rds")
 
 #list of standardized features to check
 std_features <- c(
@@ -51,11 +51,11 @@ for (feature in std_features) {
   plots[[feature]] <- p
 }
 
-ggsave("model/skew_visuals/feature_skewness.png", skewness_plot, width = 10, height = 6)
-cat("Skewness bar plot saved to model/skew_visuals/feature_skewness.png\n")
+ggsave("model/old_workflow/skew_visuals/feature_skewness.png", skewness_plot, width = 10, height = 6)
+cat("Skewness bar plot saved to model/old_workflow/skew_visuals/feature_skewness.png\n")
 
 for (feature in std_features) {
-  ggsave(paste0("model/skew_visuals/", feature, "_distribution.png"), plots[[feature]], width = 8, height = 6)
+  ggsave(paste0("model/old_workflow/skew_visuals/", feature, "_distribution.png"), plots[[feature]], width = 8, height = 6)
   cat(paste0("Distribution plot for ", feature, " saved\n"))
 }
 
@@ -92,8 +92,8 @@ comparison <- data.frame(
 print(comparison)
 
 #save comparison to CSV file
-write.csv(comparison, "model/skew_visuals/skewness_comparison.csv", row.names = FALSE)
-cat("Skewness comparison saved to model/skew_visuals/skewness_comparison.csv\n")
+write.csv(comparison, "model/old_workflow/skew_visuals/skewness_comparison.csv", row.names = FALSE)
+cat("Skewness comparison saved to model/old_workflow/skew_visuals/skewness_comparison.csv\n")
 
 #grouped bar chart for comparison
 comparison_long <- comparison %>%
@@ -125,7 +125,7 @@ comparison_plot <- ggplot(comparison_long,
                                "standardized_skewness" = "Standardized")) +
   theme_minimal()
 
-ggsave("model/skew_visuals/skewness_comparison.png", comparison_plot, width = 10, height = 6)
-cat("Skewness comparison plot saved to model/skew_visuals/skewness_comparison.png\n")
+ggsave("model/old_workflow/skew_visuals/skewness_comparison.png", comparison_plot, width = 10, height = 6)
+cat("Skewness comparison plot saved to model/old_workflow/skew_visuals/skewness_comparison.png\n")
 
 cat("\nSkewness analysis complete\n")

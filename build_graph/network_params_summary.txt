@@ -1,3 +1,8 @@
+*Note: this file is outdated. Indexing of clusters was re-calculated in a newer
+ version of build.R. 1 cluster was removed due to being out of geographic range
+ of interest. # of clusters for each result should subtract -1 from its output.
+
+
 for all test cases:
 k_max -> 5, 10, 15, 20
 dist_threshold -> 350, 450, 500, 600, 700

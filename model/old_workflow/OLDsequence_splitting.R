@@ -2,7 +2,7 @@ library(tidyverse)
 library(data.table)
 library(jsonlite)
 
-model_ready_data <- readRDS("model/model_ready_data.rds")
+model_ready_data <- readRDS("model/old_workflow/old_standardization_outputs/OLDmodel_ready_data.rds")
 
 #define sequence generation parameters
 LOOKBACK_STEPS <- 3  #number of previous time steps to use for prediction
@@ -390,26 +390,26 @@ test_df <- sequences_to_df(test_sequences)
 
 #save to csv
 if (!is.null(train_df) && nrow(train_df) > 0) {
-  write_csv(train_df, "py_model/train_sequences.csv")
+  #write_csv(train_df, "py_model/train_sequences.csv")
   cat("- Saved", nrow(train_df), "training sequences\n")
 } else {
   cat("WARNING: No valid training sequences to export\n")
 }
 
 if (!is.null(validation_df) && nrow(validation_df) > 0) {
-  write_csv(validation_df, "py_model/validation_sequences.csv")
+  #write_csv(validation_df, "py_model/validation_sequences.csv")
   cat("- Saved", nrow(validation_df), "validation sequences\n")
 } else {
   cat("WARNING: No valid validation sequences to export\n")
 }
 
 if (!is.null(test_df) && nrow(test_df) > 0) {
-  write_csv(test_df, "py_model/test_sequences.csv")
+  #write_csv(test_df, "py_model/test_sequences.csv")
   cat("- Saved", nrow(test_df), "test sequences\n")
 } else {
   cat("WARNING: No valid test sequences to export\n")
 }
-write_csv(cluster_splits_df, "py_model/cluster_splits.csv")
-write_csv(params_df, "py_model/sequence_parameters.csv")
+#write_csv(cluster_splits_df, "py_model/cluster_splits.csv")
+#write_csv(params_df, "py_model/sequence_parameters.csv")
 
 

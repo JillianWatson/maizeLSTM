@@ -29,7 +29,7 @@ cluster_dataset <- joined_dataset %>%
 
 #for diagnostics
 cluster_dataset %>% 
-  write.table(file = "model/pre_aggregate_cluster_output.txt", 
+  write.table(file = "model/aggregate_data/pre_aggregate_cluster_output.txt", 
               sep = "\t",
               row.names = FALSE, 
               quote = FALSE
@@ -123,8 +123,8 @@ edge_df <- data.frame(
   target = edge_index[2, ]
 )
 
-saveRDS(target_aggregates, "model/cluster_yearly_aggregates.rds")
-saveRDS(edge_list, "model/cluster_edge_list.rds")
+saveRDS(target_aggregates, "model/aggregate_data/cluster_yearly_aggregates.rds")
+saveRDS(edge_list, "model/aggregate_data/cluster_edge_list.rds")
 
 cluster_model_data <- list(
   yearly_aggregates = target_aggregates,
@@ -133,7 +133,7 @@ cluster_model_data <- list(
   location_mapping = location_cluster_mapping
 )
 
-saveRDS(cluster_model_data, "model/cluster_model_data.rds")
+saveRDS(cluster_model_data, "model/aggregate_data/cluster_model_data.rds")
 
 summary_stats <- target_aggregates %>%
   group_by(Year) %>%
@@ -143,12 +143,12 @@ summary_stats <- target_aggregates %>%
     Avg_locations_per_cluster = mean(Location_count, na.rm = TRUE)
   )
 
-write.csv(target_aggregates, "model/cluster_yearly_aggregates.csv", row.names = FALSE)
+write.csv(target_aggregates, "model/aggregate_data/cluster_yearly_aggregates.csv", row.names = FALSE)
 write_csv(edge_df, "py_model/edge_df.csv")
 
 cat("\nSummary statistics by year:\n")
 print(summary_stats)
 
 cat("\nCluster-level aggregation complete!\n")
-cat("Results saved to 'model/cluster_yearly_aggregates.rds'\n")
-cat("Comprehensive model data saved to 'model/cluster_model_data.rds'\n")
+cat("Results saved to 'model/aggregate_data/cluster_yearly_aggregates.rds'\n")
+cat("Comprehensive model data saved to 'model/aggregate_data/cluster_model_data.rds'\n")
