@@ -85,6 +85,10 @@ calculate_cluster_aggregates <- function(data) {
       total_gdd_mean_cluster = mean(gdd_sum, na.rm = TRUE),
       
       #count metrics 
+      
+      #location_count varies by year within each cluster and indicates how many 
+      #actual data points were available in that cluster for that specific year
+      
       Location_count = n_distinct(Location),
       .groups = "drop"
     )

@@ -83,6 +83,7 @@ cluster_weather_stations <- function(coordinates, threshold) {
     Cluster_id = 1:length(clusters),
     Latitude = numeric(length(clusters)),
     Longitude = numeric(length(clusters)),
+    #represents the number of weather stations that were grouped together to form each cluster 
     Station_count = sapply(clusters, length)
   )
   #calculate average position (centroid)
