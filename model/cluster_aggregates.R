@@ -148,7 +148,7 @@ summary_stats <- target_aggregates %>%
   )
 
 write.csv(target_aggregates, "model/aggregate_data/cluster_yearly_aggregates.csv", row.names = FALSE)
-write_csv(edge_df, "py_model/edge_df.csv")
+write_csv(edge_df, "py_model/data/edge_df.csv")
 
 cat("\nSummary statistics by year:\n")
 print(summary_stats)

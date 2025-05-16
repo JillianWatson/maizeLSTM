@@ -1,6 +1,7 @@
 library(tidyverse)
 library(data.table)
 library(jsonlite)
+library(dplyr)
 
 #all standardized data for clusters 
 standardized_data <- readRDS('model/standardized_outputs/standardized_data.rds')
@@ -207,22 +208,34 @@ seq_to_df <- function(sequences) {
     return(NULL)
   }
   
-  seq_df <- data.frame()
+  all_columns <- c('sequence_id', 'cluster_id', 'target_year', 'lookback_steps')
+  result_rows <- list()
   
-  #from first valid sequence, determine feature counts
-  expected_featurecount <- NULL
-  for (i in 1:length(sequences)) {
-    if (!is.null(sequences[[i]]$X) && is.matrix(sequences[[i]]$X)) {
-      expected_featurecount <- length(as.vector(sequences[[i]]$X))
-      break
+  feature_names <- c('mean_temp', 'mean_vpd', 'mean_yield', 
+                     'total_precip_mean', 'total_gdd_mean')
+  
+  max_lookback <- max(sapply(sequences, function(seq) length(seq$input_years)))
+  
+  #add standard input_year columns
+  for (j in 1:max_lookback) {
+    all_columns <- c(all_columns, paste0('input_year_', j))
+  }
+  
+  #add standard feature columns
+  for (step in 1:max_lookback) {
+    time_step_name <- paste0('t_minus_', step)
+    for(feat in feature_names) {
+      all_columns <- c(all_columns, paste0(time_step_name, '_', feat))
     }
   }
   
-  if (is.null(expected_featurecount)) {
-    cat('Warning: could not determine expected feature count. No valid sequences found\n')
-    return(NULL)
-  }
+  #add target column
+  all_columns <- c(all_columns, 'target_value')
   
+  seq_df <- data.frame(matrix(NA, nrow = 0, ncol = length(all_columns)))
+  colnames(seq_df) <- all_columns
+  
+  #process each sequence
   for(i in 1:length(sequences)) {
     seq <- sequences[[i]]
     
@@ -233,56 +246,45 @@ seq_to_df <- function(sequences) {
       next
     }
     
-    input_years <- seq$input_years
-    n_input_years <- length(input_years)
+    row_data <- as.list(rep(NA, length(all_columns)))
+    names(row_data) <- all_columns
     
-    row_data <- data.frame(
-      sequence_id = i,
-      cluster_id = seq$cluster_id,
-      target_year = seq$target_year[1]
-    )
+    row_data$sequence_id <- i
+    row_data$cluster_id <- seq$cluster_id
+    row_data$target_year <- seq$target_year[1]
+    row_data$lookback_steps <- length(seq$input_years)
     
-    #add input years
-    for (j in 1:n_input_years) {
+    #fill input years
+    for (j in 1:length(seq$input_years)) {
       col_name <- paste0('input_year_', j)
-      row_data[[col_name]] <- input_years[j]
+      row_data[[col_name]] <- seq$input_years[j]
     }
     
-    #flatten x matrix
+    #create standard feature names (t-3, t-2, t-1) where t is the target year
     if (is.matrix(seq$X)) {
-      features_flat <- as.vector(seq$X)
-    } else if (is.vector(seq$X)) {
-      features_flat <- seq$X
-    } else {
-      cat('warning: unexpected type for sequence ', i, '. Skipping\n')
-      next
-    }
+      x_matrix <- seq$X
+      
+      for (step in 1:nrow(x_matrix)) {
+        time_step_name <- paste0('t_minus_', nrow(x_matrix) - step + 1)
+        
+        for (feat in 1:ncol(x_matrix)) {
+          #col name description
+          get_feat_name <- feature_names[feat]
+          col_name <- paste0(time_step_name, '_', get_feat_name)
+          
+          row_data[[col_name]] <- x_matrix[step, feat]
+        }
+      }
+    } 
     
-    #check for feature length consistency after conversion
-    if (length(features_flat) != expected_featurecount) {
-      cat('Warning: sequence ', i, ' has ', length(features_flat),
-          'features. ', expected_featurecount, ' features are expected. Skipping\n')
-      next
-    }
+    row_data$target_value <- seq$y[1]
     
-    #add features to df (temp, vpd, gdd, precipitation)
-    for (j in 1:length(features_flat)) {
-      col_name <- paste0('feature_', j)
-      row_data[[col_name]] <- features_flat[j]
-    }
-    
-    #add target value (yield)
-    if (length(seq$y) > 0) {
-      row_data$target_value <- seq$y[1]
-    } else {
-      cat('Warning: sequence', i, ' has empty target value. Skipping\n')
-      next
-    }
-    seq_df <- rbind(seq_df, row_data)
+    seq_df[i, ] <- as.data.frame(row_data, stringsAsFactors = FALSE)
   }
   
   return(seq_df)
 }
+
 
 train_df <- seq_to_df(training_sequences)
 validation_df <- seq_to_df(validation_sequences)
